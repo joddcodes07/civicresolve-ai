@@ -1,0 +1,280 @@
+// CivicResolve-AI — PostgreSQL data model
+// Route it right · Track it live · Prove it's fixed.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// NOTE: Prisma 7 moved the connection URL out of the schema.
+// The URL for migrations lives in ../prisma.config.js; the runtime client
+// connects through the @prisma/adapter-pg driver adapter (see src/db.js).
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CITIZEN
+  OFFICER
+  ADMIN
+}
+
+enum ComplaintStatus {
+  SUBMITTED
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CONFIRMED
+  REOPENED
+  NEEDS_REVIEW
+}
+
+enum IssueStatus {
+  OPEN
+  RESOLVED
+  CONFIRMED
+}
+
+enum SenderRole {
+  CITIZEN
+  OFFICER
+  ADMIN
+  BOT
+}
+
+enum Channel {
+  IN_APP
+  EMAIL
+  SMS
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String?  @unique
+  phone        String?  @unique
+  passwordHash String
+  role         Role     @default(CITIZEN)
+  createdAt    DateTime @default(now())
+
+  departmentId String?
+  department   Department? @relation("DeptMembers", fields: [departmentId], references: [id])
+
+  wardId String?
+  ward   Ward?  @relation(fields: [wardId], references: [id])
+
+  headedDepartment Department?    @relation("DeptHead")
+  citizenReports   Complaint[]    @relation("CitizenReports")
+  assignedComplaints Complaint[]  @relation("AssignedOfficer")
+  statusChanges    StatusHistory[]
+  transfers        Transfer[]
+  messages         Message[]
+  notifications    Notification[]
+
+  @@index([role])
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique
+  slaHours  Int      @default(72)
+  createdAt DateTime @default(now())
+
+  headUserId String? @unique
+  headUser   User?   @relation("DeptHead", fields: [headUserId], references: [id])
+
+  members    User[]     @relation("DeptMembers")
+  categories Category[]
+  complaints Complaint[]
+  transfersFrom Transfer[] @relation("TransferFrom")
+  transfersTo   Transfer[] @relation("TransferTo")
+}
+
+model Category {
+  id              String @id @default(cuid())
+  name            String @unique
+  subType         String?
+  defaultSeverity Int    @default(3)
+  keywords        String[] @default([])
+  dupRadiusMetres Int    @default(50)
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  complaints Complaint[]
+  issues     Issue[]
+}
+
+model Ward {
+  id       String @id @default(cuid())
+  name     String @unique
+  lat      Float
+  lng      Float
+  boundary Json?
+
+  users      User[]
+  complaints Complaint[]
+  issues     Issue[]
+}
+
+model Issue {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  lat         Float
+  lng         Float
+  reportCount Int         @default(1)
+  priority    Int         @default(0)
+  status      IssueStatus @default(OPEN)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  wardId String?
+  ward   Ward?  @relation(fields: [wardId], references: [id])
+
+  complaints Complaint[]
+
+  @@index([categoryId, status])
+  @@index([wardId])
+}
+
+model Complaint {
+  id           String @id @default(cuid())
+  code         String @unique
+  originalText String
+  englishText  String?
+  summary      String?
+  language     String @default("en")
+
+  severity      Int     @default(3)
+  safetyRisk    Boolean @default(false)
+  aiConfidence  Float   @default(0)
+  needsReview   Boolean @default(false)
+  routingSource String  @default("rules")
+
+  priority       Int    @default(0)
+  priorityReason String @default("")
+
+  lat        Float
+  lng        Float
+  photoUrl   String?
+  afterPhotoUrl String?
+
+  status          ComplaintStatus @default(SUBMITTED)
+  escalationLevel Int             @default(0)
+  reopened        Boolean         @default(false)
+
+  slaHours   Int
+  dueAt      DateTime
+  resolvedAt DateTime?
+  confirmsAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  citizenId String?
+  citizen   User?   @relation("CitizenReports", fields: [citizenId], references: [id])
+
+  officerId String?
+  officer   User?   @relation("AssignedOfficer", fields: [officerId], references: [id])
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  wardId String?
+  ward   Ward?  @relation(fields: [wardId], references: [id])
+
+  issueId String?
+  issue   Issue?  @relation(fields: [issueId], references: [id])
+
+  statusHistory StatusHistory[]
+  transfers     Transfer[]
+  messages      Message[]
+  feedback      Feedback?
+  notifications Notification[]
+
+  @@index([status, departmentId])
+  @@index([createdAt])
+  @@index([wardId])
+  @@index([categoryId])
+}
+
+model StatusHistory {
+  id          String   @id @default(cuid())
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  fromStatus  String?
+  toStatus    String
+  note        String?
+  photoUrl    String?
+  changedById String?
+  changedBy   User?    @relation(fields: [changedById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([complaintId])
+}
+
+model Transfer {
+  id          String   @id @default(cuid())
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  fromDeptId  String?
+  fromDept    Department? @relation("TransferFrom", fields: [fromDeptId], references: [id])
+  toDeptId    String?
+  toDept      Department? @relation("TransferTo", fields: [toDeptId], references: [id])
+  reason      String
+  officerId   String?
+  officer     User?    @relation(fields: [officerId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([complaintId])
+}
+
+model Message {
+  id          String     @id @default(cuid())
+  complaintId String
+  complaint   Complaint  @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  senderRole  SenderRole
+  senderId    String?
+  sender      User?      @relation(fields: [senderId], references: [id])
+  senderName  String?
+  body        String
+  createdAt   DateTime   @default(now())
+
+  @@index([complaintId])
+}
+
+model Feedback {
+  id          String   @id @default(cuid())
+  complaintId String   @unique
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  confirmed   Boolean
+  rating      Int?
+  comment     String?
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  complaintId String?
+  complaint   Complaint? @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  channel     Channel  @default(IN_APP)
+  message     String
+  read        Boolean  @default(false)
+  sentAt      DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

@@ -1,0 +1,30 @@
+{
+  "name": "civicresolve-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CivicResolve-AI — an AI-based single window to lodge and track citizen grievances across multiple departments (PS #343). Route it right · Track it live · Prove it's fixed.",
+  "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "db:up": "bash scripts/db.sh up",
+    "db:down": "bash scripts/db.sh down",
+    "db:init": "bash scripts/db.sh init",
+    "db:setup": "bash scripts/db.sh up && npm --workspace server run prisma:generate && npm --workspace server run prisma:migrate && npm --workspace server run seed",
+    "db:seed": "npm --workspace server run seed",
+    "db:reset": "npm --workspace server run prisma:reset",
+    "dev": "concurrently -k -n api,web -c blue,magenta \"npm --workspace server run dev\" \"npm --workspace client run dev\"",
+    "dev:api": "npm --workspace server run dev",
+    "dev:web": "npm --workspace client run dev",
+    "build": "npm --workspace client run build",
+    "test": "npm --workspace server run test"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

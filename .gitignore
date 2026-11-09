@@ -1,0 +1,29 @@
+node_modules/
+dist/
+build/
+
+# local postgres cluster
+server/.pgdata/
+
+# env
+.env
+.env.local
+*.local
+
+# uploads (keep the folder, drop the files)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# prisma
+server/prisma/*.db
+server/prisma/migrations/dev.db*

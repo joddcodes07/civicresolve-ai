@@ -1,0 +1,31 @@
+{
+  "name": "@civicresolve/client",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 5173"
+  },
+  "dependencies": {
+    "@fontsource/inter": "5.3.0",
+    "@fontsource/jetbrains-mono": "5.3.0",
+    "@fontsource/noto-sans-devanagari": "5.3.0",
+    "@fontsource/space-grotesk": "5.3.0",
+    "canvas-confetti": "1.9.4",
+    "leaflet": "1.9.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-leaflet": "5.0.0",
+    "react-router-dom": "7.18.5",
+    "recharts": "3.10.1",
+    "socket.io-client": "4.8.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@vitejs/plugin-react": "6.2.1",
+    "tailwindcss": "4.3.3",
+    "vite": "8.3.5"
+  }
+}
