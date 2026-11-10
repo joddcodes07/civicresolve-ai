@@ -16,6 +16,8 @@ export function haversineMetres(aLat, aLng, bLat, bLng) {
 
 /** Ray-casting point-in-polygon. `polygon` is an array of [lng, lat] rings or a GeoJSON geometry. */
 export function pointInPolygon(lat, lng, polygon) {
+  if (polygon?.type === 'Feature') return pointInPolygon(lat, lng, polygon.geometry)
+  if (polygon?.type === 'MultiPolygon') return polygon.coordinates.some(coordinates => pointInPolygon(lat, lng, { type: 'Polygon', coordinates }))
   const rings = normaliseRings(polygon)
   if (!rings || rings.length === 0) return false
 

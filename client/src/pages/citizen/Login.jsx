@@ -23,9 +23,11 @@ export default function Login() {
   const [form, setForm] = useState({ name: '', identifier: '', email: '', phone: '', password: '' })
   const [busy, setBusy] = useState(false)
   const [demo, setDemo] = useState([])
+  const [stats, setStats] = useState(null)
   const from = location.state?.from || null
 
   useEffect(() => {
+    api.get('/api/meta/stats').then(d => setStats(d.stats)).catch(() => {})
     api.get('/api/auth/demo-accounts').then((d) => setDemo(d.accounts || [])).catch(() => {})
   }, [])
 
@@ -168,9 +170,9 @@ export default function Login() {
         </div>
         <div className="grid grid-cols-3 gap-6">
           {[
-            ['3', 'languages'],
-            ['14', 'departments'],
-            ['7', 'formulas'],
+            [stats?.languages ?? '—', 'languages'],
+            [stats?.departments ?? '—', 'departments'],
+            [stats?.formulas ?? '—', 'formulas'],
           ].map(([n, label]) => (
             <div key={label}>
               <div className="mono text-3xl">{n}</div>

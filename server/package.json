@@ -12,7 +12,13 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:reset": "prisma migrate reset --force",
     "seed": "node prisma/seed.js",
-    "test": "node --test --test-force-exit \"src/tests/**/*.test.js\""
+    "test": "node --test --test-force-exit \"src/tests/**/*.test.js\"",
+    "data:import": "node scripts/import-pune.js",
+    "data:fetch-places": "node scripts/fetch-pune-places.js",
+    "user:provision": "node scripts/provision-work-user.js",
+    "ai:evaluate": "node scripts/evaluate-ai.js",
+    "test:integration": "node --test --test-force-exit src/tests/integration.test.js",
+    "data:import-complaints": "node scripts/import-complaints.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",

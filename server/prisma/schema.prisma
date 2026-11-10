@@ -52,6 +52,8 @@ model User {
   name         String
   email        String?  @unique
   phone        String?  @unique
+  tokenVersion Int @default(0)
+  resetTokens PasswordResetToken[]
   passwordHash String
   role         Role     @default(CITIZEN)
   createdAt    DateTime @default(now())
@@ -150,6 +152,7 @@ model Complaint {
 
   severity      Int     @default(3)
   safetyRisk    Boolean @default(false)
+  nearSensitivePlace Boolean @default(false)
   aiConfidence  Float   @default(0)
   needsReview   Boolean @default(false)
   routingSource String  @default("rules")
@@ -198,6 +201,7 @@ model Complaint {
   feedback      Feedback?
   notifications Notification[]
 
+  @@index([citizenId, createdAt])
   @@index([status, departmentId])
   @@index([createdAt])
   @@index([wardId])
@@ -277,4 +281,25 @@ model Setting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model PasswordResetToken {
+  id String @id @default(cuid())
+  tokenHash String @unique
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+
+model SensitivePlace {
+  id String @id
+  name String
+  kind String
+  lat Float
+  lng Float
+  sourceUrl String
+  @@index([lat, lng])
 }

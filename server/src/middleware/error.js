@@ -15,11 +15,12 @@ export function notFoundHandler(_req, res) {
 // eslint-disable-next-line no-unused-vars
 export function errorHandler(err, _req, res, _next) {
   const status = err.status || err.statusCode || 500
-  if (status >= 500) console.error('[error]', err)
   if (err.name === 'MulterError') {
     return res.status(400).json({ error: `Upload failed: ${err.message}` })
   }
-  res.status(status).json({ error: err.message || 'Something went wrong', ...(err.extra || {}) })
+  if (status >= 500) console.error('[error]', err.name, err.code || '')
+  if (err.code === 'P2002') return res.status(409).json({ error: 'A record with those details already exists' })
+  res.status(status).json({ error: status >= 500 ? 'Service temporarily unavailable' : (err.message || 'Something went wrong'), ...(err.extra || {}) })
 }
 
 // Wrap async handlers so rejections reach the error handler (Express 5 does this

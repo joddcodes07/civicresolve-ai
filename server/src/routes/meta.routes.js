@@ -49,6 +49,11 @@ router.get(
   }),
 )
 
+router.get('/data-provenance', asyncHandler(async (_req, res) => {
+  const record = await prisma.setting.findUnique({ where: { key: 'referenceData' } })
+  res.json({ provenance: record ? JSON.parse(record.value) : null })
+}))
+
 router.get('/city', (_req, res) => {
   res.json({ city: CITY, ai: aiStatus() })
 })
@@ -68,6 +73,8 @@ router.get(
     res.json({
       stats: {
         total,
+        languages: 3,
+        formulas: 7,
         resolved: resolvedOrConfirmed,
         verified,
         open: openCount,

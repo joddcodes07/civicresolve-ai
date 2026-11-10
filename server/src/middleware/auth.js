@@ -4,7 +4,7 @@ import { prisma } from '../db.js'
 import { env } from '../env.js'
 
 export function signToken(user) {
-  return jwt.sign({ sub: user.id, role: user.role }, env.jwt.secret, { expiresIn: env.jwt.expiresIn })
+  return jwt.sign({ sub: user.id, role: user.role, ver: user.tokenVersion || 0 }, env.jwt.secret, { expiresIn: env.jwt.expiresIn })
 }
 
 function readToken(req) {
@@ -13,33 +13,28 @@ function readToken(req) {
   return null
 }
 
-export function optionalAuth(req, _res, next) {
+export async function authenticateToken(token) {
+  const payload = jwt.verify(token, env.jwt.secret, { algorithms: ['HS256'] })
+  const user = await prisma.user.findUnique({
+    where: { id: payload.sub },
+    select: { id: true, name: true, email: true, role: true, departmentId: true, wardId: true, tokenVersion: true },
+  })
+  if (!user || (payload.ver || 0) !== user.tokenVersion) throw new Error('Invalid session')
+  return user
+}
+
+export async function optionalAuth(req, res, next) {
   const token = readToken(req)
-  if (token) {
-    try {
-      req.auth = jwt.verify(token, env.jwt.secret)
-    } catch {
-      req.auth = null
-    }
-  }
-  next()
+  if (!token) return next()
+  try { req.user = await authenticateToken(token); next() }
+  catch { res.status(401).json({ error: 'Session expired, please sign in again' }) }
 }
 
 export async function requireAuth(req, res, next) {
   const token = readToken(req)
   if (!token) return res.status(401).json({ error: 'Authentication required' })
-  try {
-    const payload = jwt.verify(token, env.jwt.secret)
-    const user = await prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, name: true, email: true, role: true, departmentId: true, wardId: true },
-    })
-    if (!user) return res.status(401).json({ error: 'Account not found' })
-    req.user = user
-    next()
-  } catch {
-    return res.status(401).json({ error: 'Session expired, please sign in again' })
-  }
+  try { req.user = await authenticateToken(token); next() }
+  catch { res.status(401).json({ error: 'Session expired, please sign in again' }) }
 }
 
 export function requireRole(...roles) {

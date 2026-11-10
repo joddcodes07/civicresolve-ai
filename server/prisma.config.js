@@ -5,7 +5,7 @@ import { defineConfig } from 'prisma/config'
 
 // Load server/.env relative to this file so the CLI works from any cwd.
 // `override` keeps the project's own .env authoritative over ambient shell vars.
-loadEnv({ path: new URL('.env', import.meta.url), quiet: true, override: true })
+loadEnv({ path: new URL('.env', import.meta.url), quiet: true, override: false })
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
@@ -16,6 +16,6 @@ export default defineConfig({
   datasource: {
     // Use process.env directly (not env()) so `prisma generate` works even
     // when DATABASE_URL is absent, e.g. during a CI type-check.
-    url: process.env.DATABASE_URL ?? '',
+    url: process.env.DIRECT_URL || process.env.DATABASE_URL || '',
   },
 })

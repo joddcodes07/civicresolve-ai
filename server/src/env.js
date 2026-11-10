@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 const here = path.dirname(fileURLToPath(import.meta.url))
 // server/.env is the source of truth for this project, so it overrides any
 // ambient shell variables (e.g. a global NODE_ENV=production).
-loadEnv({ path: path.resolve(here, '../.env'), quiet: true, override: true })
+loadEnv({ path: path.resolve(here, '../.env'), quiet: true, override: false })
 
 const bool = (v, fallback = false) => {
   if (v === undefined || v === null || v === '') return fallback
@@ -24,9 +24,15 @@ export const env = {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
 
+  groqKey: process.env.GROQ_API_KEY || process.env.LLM_API_KEY || '',
+  whisperModel: process.env.GROQ_WHISPER_MODEL || 'whisper-large-v3-turbo',
+  trustProxy: Number(process.env.TRUST_PROXY_HOPS || 0),
+  resetUrl: process.env.PASSWORD_RESET_URL || 'http://localhost:5173/reset-password',
+  workEmailDomains: (process.env.WORK_EMAIL_DOMAINS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
+
   llm: {
-    provider: String(process.env.LLM_PROVIDER || '').trim().toLowerCase(),
-    apiKey: process.env.LLM_API_KEY || '',
+    provider: String(process.env.LLM_PROVIDER || (process.env.GROQ_API_KEY ? 'groq' : '')).trim().toLowerCase(),
+    apiKey: process.env.GROQ_API_KEY || process.env.LLM_API_KEY || '',
     model: process.env.LLM_MODEL || '',
     baseUrl: process.env.LLM_BASE_URL || '',
     timeoutMs: Number(process.env.LLM_TIMEOUT_MS || 8000),
@@ -48,4 +54,8 @@ export const env = {
 }
 
 export const isProd = env.nodeEnv === 'production'
+if (isProd && (env.jwt.secret.length < 32 || env.jwt.secret.includes('change-me'))) throw new Error('Set a random JWT_SECRET of at least 32 characters')
+if (isProd && !env.databaseUrl) throw new Error('DATABASE_URL is required')
+if (isProd && !env.resetUrl.startsWith('https://')) throw new Error('PASSWORD_RESET_URL must use HTTPS')
+
 export const llmEnabled = Boolean(env.llm.provider && (env.llm.apiKey || env.llm.provider === 'ollama'))

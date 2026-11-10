@@ -5,13 +5,14 @@ import { prisma } from '../db.js'
 import { validate } from '../middleware/validate.js'
 import { requireAuth, requireRole, optionalAuth } from '../middleware/auth.js'
 import { asyncHandler, HttpError } from '../middleware/error.js'
-import { upload, publicUrl } from '../middleware/upload.js'
+import { upload, publicUrl, validateUploadedPhoto } from '../middleware/upload.js'
+import { validatePuneLocation } from '../services/submissionService.js'
 import { complaintLimiter } from '../middleware/rateLimit.js'
 import { serialiseComplaint } from '../lib/serialize.js'
 import { classifyComplaint } from '../services/aiService.js'
 import { findDuplicateCandidate } from '../services/dupService.js'
 import { createComplaint, updateStatus, transferComplaint, submitFeedback, joinIssue } from '../services/complaintService.js'
-import { broadcastComplaint } from '../services/notifyService.js'
+import { notifyStatusChange, broadcastComplaint } from '../services/notifyService.js'
 
 const router = Router()
 
@@ -28,15 +29,19 @@ const DETAIL_INCLUDE = {
 // ---- Lodge a complaint ----------------------------------------------------
 router.post(
   '/',
-  optionalAuth,
+  requireAuth,
   complaintLimiter,
   upload.single('photo'),
+  validateUploadedPhoto,
   asyncHandler(async (req, res) => {
     const text = String(req.body.text || '').trim()
     const lat = Number(req.body.lat)
     const lng = Number(req.body.lng)
     const categoryIdOverride = req.body.categoryId ? String(req.body.categoryId) : undefined
 
+    if (text.length > 2000) throw new HttpError(400, 'Description must be under 2000 characters')
+    await validatePuneLocation(lat, lng)
+    if (categoryIdOverride && !await prisma.category.findUnique({ where: { id: categoryIdOverride } })) throw new HttpError(400, 'Unknown category')
     if (text.length < 10) throw new HttpError(400, 'Please describe the problem in at least 10 characters.')
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new HttpError(400, 'A location (lat/lng) is required.')
 
@@ -76,6 +81,8 @@ router.get(
     const payload = serialiseComplaint(complaint, { history: true, messages: true })
     payload.officer = complaint.officer ? { name: complaint.officer.name } : null
     payload.citizen = null
+    payload.messages = []
+    payload.history = payload.history.map(h => ({ ...h, changedBy: null }))
     res.json({ complaint: payload })
   }),
 )
@@ -148,7 +155,7 @@ router.get(
       },
     })
     if (!complaint) throw new HttpError(404, 'Complaint not found')
-    if (req.user.role === 'OFFICER' && complaint.departmentId && req.user.departmentId !== complaint.departmentId) {
+    if (req.user.role === 'OFFICER' && req.user.departmentId !== complaint.departmentId) {
       throw new HttpError(403, 'This complaint is outside your department')
     }
     const payload = serialiseComplaint(complaint, { history: true, messages: true })
@@ -171,6 +178,7 @@ router.post(
   validate(joinSchema),
   asyncHandler(async (req, res) => {
     const result = await joinIssue({ issueId: req.body.issueId, citizenId: req.user.id, note: req.body.note })
+    if (result.error === 'already_joined') throw new HttpError(409, 'You have already supported this issue')
     if (result.error) throw new HttpError(404, 'That issue is no longer available.')
     const full = await prisma.complaint.findUnique({ where: { id: result.complaint.id }, include: DETAIL_INCLUDE })
     res.status(201).json({ complaint: serialiseComplaint(full, { history: true }) })
@@ -197,13 +205,23 @@ router.post(
     })
     if (result.error === 'not_found') throw new HttpError(404, 'Complaint not found')
     if (result.error === 'forbidden') throw new HttpError(403, 'This is not your complaint')
+    if (result.error === 'invalid_state') throw new HttpError(409, 'Feedback is accepted only for resolved complaints')
     res.json({ complaint: serialiseComplaint(result.complaint) })
   }),
 )
 
+async function conversationAccess(req, _res, next) {
+  const c = await prisma.complaint.findUnique({ where: { id: req.params.id } })
+  if (!c) throw new HttpError(404, 'Complaint not found')
+  if (req.user.role !== 'ADMIN' && !(req.user.role === 'CITIZEN' ? c.citizenId === req.user.id : c.departmentId === req.user.departmentId)) throw new HttpError(403, 'Access denied')
+  next()
+}
+
 // ---- Lifecycle conversation ----------------------------------------------
 router.get(
   '/:id/messages',
+  requireAuth,
+  conversationAccess,
   asyncHandler(async (req, res) => {
     const messages = await prisma.message.findMany({
       where: { complaintId: req.params.id },
@@ -223,6 +241,7 @@ const messageSchema = z.object({ body: z.string().trim().min(1).max(1000), sende
 router.post(
   '/:id/messages',
   requireAuth,
+  conversationAccess,
   validate(messageSchema),
   asyncHandler(async (req, res) => {
     const complaint = await prisma.complaint.findUnique({ where: { id: req.params.id }, select: { id: true, code: true, departmentId: true } })
@@ -245,7 +264,9 @@ router.post(
   '/:id/photo',
   requireAuth,
   requireRole('OFFICER', 'ADMIN'),
+  conversationAccess,
   upload.single('photo'),
+  validateUploadedPhoto,
   asyncHandler(async (req, res) => {
     if (!req.file) throw new HttpError(400, 'No photo received')
     res.status(201).json({ url: publicUrl(req.file) })
@@ -277,6 +298,7 @@ router.patch(
     })
     if (result.error === 'not_found') throw new HttpError(404, 'Complaint not found')
     if (result.error === 'forbidden') throw new HttpError(403, 'This complaint is outside your department')
+    if (result.error === 'invalid_state') throw new HttpError(409, 'Invalid status transition; review the complaint first')
     if (result.error === 'proof_required') {
       throw new HttpError(422, 'Proof of fix required', { reasons: result.reasons, code: 'proof_required' })
     }
@@ -300,11 +322,33 @@ router.post(
       reason: req.body.reason,
     })
     if (result.error === 'not_found') throw new HttpError(404, 'Complaint not found')
+    if (result.error === 'forbidden') throw new HttpError(403, 'This complaint is outside your department')
     if (result.error === 'bad_department') throw new HttpError(400, 'Unknown department')
     broadcastComplaint(result.complaint)
     const full = await prisma.complaint.findUnique({ where: { id: req.params.id }, include: DETAIL_INCLUDE })
     res.json({ complaint: serialiseComplaint(full, { history: true }) })
   }),
 )
+
+// Officer correction is audited, accepts a category from the database only.
+router.patch('/:id/ai-override', requireAuth, requireRole('OFFICER', 'ADMIN'), conversationAccess,
+  validate(z.object({ categoryId: z.string().min(1), reason: z.string().trim().min(5).max(500) })),
+  asyncHandler(async (req, res) => {
+    const updated = await prisma.$transaction(async tx => {
+      const original = await tx.complaint.findUniqueOrThrow({ where: { id: req.params.id } })
+      const category = await tx.category.findUnique({ where: { id: req.body.categoryId }, include: { department: true } })
+      if (!category) throw new HttpError(400, 'Unknown category')
+      const officer = await tx.user.findFirst({ where: { role: 'OFFICER', departmentId: category.departmentId }, select: { id: true } })
+      const c = await tx.complaint.update({ where: { id: original.id }, data: {
+        categoryId: category.id, departmentId: category.departmentId, officerId: officer?.id || null,
+        needsReview: false, routingSource: 'officer_override', status: 'ASSIGNED',
+      } })
+      await tx.transfer.create({ data: { complaintId: c.id, fromDeptId: original.departmentId, toDeptId: category.departmentId, officerId: req.user.id, reason: req.body.reason } })
+      await tx.statusHistory.create({ data: { complaintId: c.id, fromStatus: original.status, toStatus: c.status, changedById: req.user.id, note: `AI category changed from ${original.categoryId} to ${category.name}: ${req.body.reason}` } })
+      return c
+    })
+    await notifyStatusChange(updated, { toStatus: updated.status, note: req.body.reason, actorName: req.user.name })
+    res.json({ complaint: serialiseComplaint(await prisma.complaint.findUnique({ where: { id: updated.id }, include: DETAIL_INCLUDE })) })
+  }))
 
 export default router

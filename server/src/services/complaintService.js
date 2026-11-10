@@ -1,6 +1,7 @@
 // Complaint lifecycle orchestration: create (AI + duplicate + priority), status
 // transitions (with the proof-of-fix gate), transfers, citizen feedback and +1 joins.
 
+import { withDailyQuota } from './submissionService.js'
 import { prisma } from '../db.js'
 import { classifyComplaint } from './aiService.js'
 import { resolveIssue } from './dupService.js'
@@ -13,9 +14,9 @@ import { notifyAcknowledgement, notifyStatusChange, broadcastComplaint } from '.
 
 const OPEN = ['SUBMITTED', 'ASSIGNED', 'IN_PROGRESS', 'REOPENED', 'NEEDS_REVIEW']
 
-async function pickOfficer(departmentId) {
+async function pickOfficer(departmentId, client = prisma) {
   if (!departmentId) return null
-  return prisma.user.findFirst({
+  return client.user.findFirst({
     where: { role: 'OFFICER', departmentId },
     orderBy: { createdAt: 'asc' },
     select: { id: true },
@@ -28,16 +29,24 @@ async function pickOfficer(departmentId) {
  *           categoryIdOverride?:string, citizenName?:string }} input
  */
 export async function createComplaint(input) {
+  const ai = await classifyComplaint(input.text, { includeMatched: true, lat: input.lat, lng: input.lng })
+  const result = await withDailyQuota(input.citizenId, client => createComplaintRecord(input, ai, client))
+  const citizen = await prisma.user.findUnique({ where: { id: input.citizenId }, select: { id: true, email: true, name: true } })
+  await notifyAcknowledgement(result.complaint, citizen)
+  return result
+}
+
+async function createComplaintRecord(input, initialAi, client) {
   const { text, lat, lng, photoUrl = null, citizenId = null } = input
-  const wards = await prisma.ward.findMany()
+  const wards = await client.ward.findMany()
   const ward = resolveWard(lat, lng, wards)
 
   // 1. AI routing (LLM if configured, otherwise the local rules engine).
-  let ai = await classifyComplaint(text, { includeMatched: true })
+  let ai = initialAi
 
   // 2. Citizen correction wins over the AI's guess.
   if (input.categoryIdOverride && input.categoryIdOverride !== ai.categoryId) {
-    const override = await prisma.category.findUnique({
+    const override = await client.category.findUnique({
       where: { id: input.categoryIdOverride },
       include: { department: true },
     })
@@ -56,14 +65,15 @@ export async function createComplaint(input) {
   }
 
   // 3. Duplicate / issue grouping (F4).
-  const category = await prisma.category.findUnique({ where: { id: ai.categoryId } })
+  const category = await client.category.findUnique({ where: { id: ai.categoryId } })
   const issue = await resolveIssue({
     categoryId: ai.categoryId,
     lat,
     lng,
     wardId: ward?.id,
     text: ai.englishText || text,
-    radiusMetres: category?.dupRadiusMetres ?? 50,
+    radiusMetres: 50,
+    client,
   })
 
   // 4. Priority (F1) + SLA deadline (F2).
@@ -80,10 +90,10 @@ export async function createComplaint(input) {
   const now = new Date()
   const dueAt = computeDueAt(now, ai.slaHours)
   const status = ai.needsReview ? 'NEEDS_REVIEW' : 'ASSIGNED'
-  const officer = ai.needsReview ? null : await pickOfficer(ai.departmentId)
-  const code = await nextComplaintCode()
+  const officer = ai.needsReview ? null : await pickOfficer(ai.departmentId, client)
+  const code = await nextComplaintCode(client)
 
-  const complaint = await prisma.complaint.create({
+  const complaint = await client.complaint.create({
     data: {
       code,
       originalText: text,
@@ -92,6 +102,7 @@ export async function createComplaint(input) {
       language: ai.language,
       severity: ai.severity,
       safetyRisk: ai.safetyRisk,
+      nearSensitivePlace: ai.nearSchoolOrHospital,
       aiConfidence: ai.confidence,
       needsReview: ai.needsReview,
       routingSource: ai.routingSource,
@@ -113,12 +124,12 @@ export async function createComplaint(input) {
     include: { category: true, department: true, ward: true },
   })
 
-  await prisma.issue.update({
+  await client.issue.update({
     where: { id: issue.issueId },
     data: { priority: { set: Math.max(priority.score, 0) } },
   })
 
-  await prisma.statusHistory.create({
+  await client.statusHistory.create({
     data: {
       complaintId: complaint.id,
       fromStatus: null,
@@ -129,11 +140,6 @@ export async function createComplaint(input) {
     },
   })
 
-  const citizen = citizenId
-    ? await prisma.user.findUnique({ where: { id: citizenId }, select: { id: true, email: true, name: true } })
-    : null
-  await notifyAcknowledgement(complaint, citizen)
-
   return { complaint, ai, priority, issue, ward }
 }
 
@@ -141,9 +147,12 @@ export async function createComplaint(input) {
 export async function updateStatus({ complaintId, actor, toStatus, note, photoUrl, afterLat, afterLng }) {
   const complaint = await prisma.complaint.findUnique({ where: { id: complaintId }, include: { department: true } })
   if (!complaint) return { error: 'not_found' }
-  if (actor.role === 'OFFICER' && complaint.departmentId && actor.departmentId !== complaint.departmentId) {
+  if (actor.role === 'OFFICER' && actor.departmentId !== complaint.departmentId) {
     return { error: 'forbidden' }
   }
+
+  const transitions = { SUBMITTED: ['ASSIGNED'], ASSIGNED: ['IN_PROGRESS', 'RESOLVED'], IN_PROGRESS: ['RESOLVED'], REOPENED: ['ASSIGNED', 'IN_PROGRESS', 'RESOLVED'] }
+  if (!transitions[complaint.status]?.includes(toStatus)) return { error: 'invalid_state' }
 
   if (toStatus === 'RESOLVED') {
     const proof = checkProofOfFix({
@@ -167,7 +176,7 @@ export async function updateStatus({ complaintId, actor, toStatus, note, photoUr
     hoursPassed,
     slaHours: complaint.slaHours,
     reopened: complaint.reopened,
-    nearSchoolOrHospital: false,
+    nearSchoolOrHospital: complaint.nearSensitivePlace,
   })
 
   const data = {
@@ -212,6 +221,7 @@ export async function updateStatus({ complaintId, actor, toStatus, note, photoUr
 export async function transferComplaint({ complaintId, actor, toDepartmentId, reason }) {
   const complaint = await prisma.complaint.findUnique({ where: { id: complaintId } })
   if (!complaint) return { error: 'not_found' }
+  if (actor.role === 'OFFICER' && actor.departmentId !== complaint.departmentId) return { error: 'forbidden' }
   const target = await prisma.department.findUnique({ where: { id: toDepartmentId } })
   if (!target) return { error: 'bad_department' }
 
@@ -249,8 +259,9 @@ export async function transferComplaint({ complaintId, actor, toDepartmentId, re
 export async function submitFeedback({ complaintId, citizenId, confirmed, rating, comment }) {
   const complaint = await prisma.complaint.findUnique({ where: { id: complaintId } })
   if (!complaint) return { error: 'not_found' }
-  if (complaint.citizenId && citizenId && complaint.citizenId !== citizenId) return { error: 'forbidden' }
+  if (!citizenId || complaint.citizenId !== citizenId) return { error: 'forbidden' }
 
+  if (complaint.status !== 'RESOLVED') return { error: 'invalid_state' }
   const toStatus = confirmed ? 'CONFIRMED' : 'REOPENED'
   const hoursPassed = hoursBetween(complaint.createdAt)
   const priority = getPriority({
@@ -260,7 +271,7 @@ export async function submitFeedback({ complaintId, citizenId, confirmed, rating
     hoursPassed,
     slaHours: complaint.slaHours,
     reopened: !confirmed,
-    nearSchoolOrHospital: false,
+    nearSchoolOrHospital: complaint.nearSensitivePlace,
   })
 
   const updated = await prisma.complaint.update({
@@ -307,17 +318,27 @@ export async function submitFeedback({ complaintId, citizenId, confirmed, rating
 }
 
 /** A citizen taps "+1 — I have this problem too" on an existing issue. */
-export async function joinIssue({ issueId, citizenId, note }) {
-  const issue = await prisma.issue.findUnique({ where: { id: issueId }, include: { category: true, ward: true } })
-  if (!issue) return { error: 'not_found' }
+export async function joinIssue(input) {
+  const result = await withDailyQuota(input.citizenId, client => joinIssueRecord(input, client))
+  if (!result.error) {
+    const citizen = await prisma.user.findUnique({ where: { id: input.citizenId }, select: { id: true, name: true, email: true } })
+    await notifyAcknowledgement(result.complaint, citizen)
+  }
+  return result
+}
+async function joinIssueRecord({ issueId, citizenId, note }, client) {
+  const issue = await client.issue.findUnique({ where: { id: issueId }, include: { category: true, ward: true } })
+  if (!issue || issue.status !== 'OPEN') return { error: 'not_found' }
+  const existing = await client.complaint.findFirst({ where: { issueId, citizenId } })
+  if (existing) return { error: 'already_joined' }
 
-  const anchor = await prisma.complaint.findFirst({
+  const anchor = await client.complaint.findFirst({
     where: { issueId },
     orderBy: { createdAt: 'asc' },
   })
   if (!anchor) return { error: 'not_found' }
 
-  const updatedIssue = await prisma.issue.update({
+  const updatedIssue = await client.issue.update({
     where: { id: issueId },
     data: { reportCount: { increment: 1 } },
   })
@@ -329,18 +350,19 @@ export async function joinIssue({ issueId, citizenId, note }) {
     hoursPassed: hoursBetween(anchor.createdAt),
     slaHours: anchor.slaHours,
     reopened: anchor.reopened,
-    nearSchoolOrHospital: false,
+    nearSchoolOrHospital: anchor.nearSensitivePlace,
   })
 
-  const complaint = await prisma.complaint.create({
+  const complaint = await client.complaint.create({
     data: {
-      code: await nextComplaintCode(),
+      code: await nextComplaintCode(client),
       originalText: note || `Joined existing issue ${issue.code}`,
       englishText: note || anchor.englishText,
       summary: note ? note.slice(0, 140) : anchor.summary,
       language: 'en',
       severity: anchor.severity,
       safetyRisk: anchor.safetyRisk,
+      nearSensitivePlace: anchor.nearSensitivePlace,
       aiConfidence: 1,
       needsReview: false,
       routingSource: 'duplicate',
@@ -360,7 +382,7 @@ export async function joinIssue({ issueId, citizenId, note }) {
     },
   })
 
-  await prisma.statusHistory.create({
+  await client.statusHistory.create({
     data: {
       complaintId: complaint.id,
       fromStatus: null,
@@ -370,6 +392,5 @@ export async function joinIssue({ issueId, citizenId, note }) {
     },
   })
 
-  await broadcastComplaint(complaint, { merged: true, issueCode: issue.code, reportCount: updatedIssue.reportCount })
   return { complaint, issue: updatedIssue }
 }

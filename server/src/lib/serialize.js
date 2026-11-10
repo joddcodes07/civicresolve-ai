@@ -21,6 +21,7 @@ export function serialiseComplaint(c, opts = {}) {
     language: c.language,
     severity: c.severity,
     safetyRisk: c.safetyRisk,
+    nearSchoolOrHospital: c.nearSensitivePlace,
     aiConfidence: c.aiConfidence,
     needsReview: c.needsReview,
     routingSource: c.routingSource,

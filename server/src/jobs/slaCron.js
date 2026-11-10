@@ -22,9 +22,12 @@ export async function runSlaSweep() {
   for (const c of open) {
     const level = getEscalationLevel(hoursBetween(c.createdAt, now), c.slaHours)
     if (level > c.escalationLevel) {
+      const senior = level === 1
+        ? (await prisma.department.findUnique({ where: { id: c.departmentId || '' }, select: { headUserId: true } }))?.headUserId
+        : (await prisma.user.findFirst({ where: { role: 'ADMIN' }, orderBy: { createdAt: 'asc' }, select: { id: true } }))?.id
       const updated = await prisma.complaint.update({
         where: { id: c.id },
-        data: { escalationLevel: level },
+        data: { escalationLevel: level, ...(senior ? { officerId: senior } : {}) },
       })
       await prisma.statusHistory.create({
         data: {

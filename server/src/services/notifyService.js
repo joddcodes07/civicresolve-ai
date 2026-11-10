@@ -60,7 +60,7 @@ export function broadcastComplaint(complaint, extra = {}) {
   }
   emitToRoom(rooms.complaint(complaint.code), 'complaint:update', payload)
   if (complaint.departmentId) emitToRoom(rooms.officers(complaint.departmentId), 'queue:update', payload)
-  emitToAll('admin:update', payload)
+  emitToRoom(rooms.admins, 'admin:update', payload)
   return payload
 }
 
@@ -74,6 +74,11 @@ export async function notifyStatusChange(complaint, { toStatus, note, actorName 
 
   if (complaint.citizenId) {
     await recordNotification({ userId: complaint.citizenId, complaintId: complaint.id, message })
+  }
+
+  if (complaint.citizenId) {
+    const citizen = await prisma.user.findUnique({ where: { id: complaint.citizenId }, select: { email: true } })
+    if (citizen?.email) await sendEmail(citizen.email, `CivicResolve · ${complaint.code} ${label}`, message)
   }
 
   // Additional officer-facing notice whenever it escalates.
