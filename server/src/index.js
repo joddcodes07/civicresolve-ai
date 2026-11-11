@@ -55,6 +55,10 @@ app.get('/api/ready', async (_req, res) => {
   catch { res.status(503).json({ ok: false, database: 'unavailable' }) }
 })
 
+app.use('/api', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store')
+  next()
+})
 app.use('/api', apiLimiter)
 app.use('/api/auth', authLimiter, authRoutes)
 app.use('/api/meta', metaRoutes)

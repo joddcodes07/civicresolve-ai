@@ -4,7 +4,11 @@ import { prisma } from '../src/db.js'
 import { DEPARTMENTS, CATEGORIES } from '../src/data/taxonomy.js'
 import { centroid, pointInPolygon } from '../src/lib/geo.js'
 
-try {
+async function importPune() {
+  if (process.argv.includes('--if-missing') && await prisma.setting.findUnique({ where: { key: 'referenceData' }, select: { key: true } })) {
+    console.log('Pune reference data is already present.')
+    return
+  }
   const collection = JSON.parse(await fs.readFile(new URL('../data/pune-2022-wards.geojson', import.meta.url)))
   const boundary = { type: 'MultiPolygon', coordinates: collection.features.flatMap(f => f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates : [f.geometry.coordinates]) }
   let places = []
@@ -36,4 +40,7 @@ try {
     return { wards: collection.features.length, places: imported }
   }, { timeout: 120000 })
   console.log(JSON.stringify({ ...counts, departments: DEPARTMENTS.length, categories: CATEGORIES.length, note: 'Historical ward geometry + community places loaded. SLA targets remain provisional. No complaints or users fabricated.' }))
-} finally { await prisma.$disconnect() }
+}
+
+try { await importPune() }
+finally { await prisma.$disconnect() }
