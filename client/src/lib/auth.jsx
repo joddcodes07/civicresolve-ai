@@ -1,5 +1,6 @@
 // Auth context: holds the signed-in user, token and role helpers.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { resetSocketAuth } from './socket.js'
 import { api, getStoredUser, getToken, setStoredUser, setToken } from './api.js'
 
 const AuthContext = createContext(null)
@@ -23,7 +24,8 @@ export function AuthProvider({ children }) {
         setStoredUser(fresh)
       } catch {
         if (!alive) return
-        setToken(null)
+        resetSocketAuth()
+    setToken(null)
         setStoredUser(null)
         setUser(null)
       } finally {
@@ -38,6 +40,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async ({ identifier, password }) => {
     const data = await api.post('/api/auth/login', { identifier, password })
+    resetSocketAuth()
     setToken(data.token)
     setStoredUser(data.user)
     setUser(data.user)
@@ -45,6 +48,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const loginWithToken = useCallback((token, nextUser) => {
+    resetSocketAuth()
     setToken(token)
     setStoredUser(nextUser)
     setUser(nextUser)
@@ -52,6 +56,7 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (payload) => {
     const data = await api.post('/api/auth/register', payload)
+    resetSocketAuth()
     setToken(data.token)
     setStoredUser(data.user)
     setUser(data.user)
@@ -59,6 +64,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   const logout = useCallback(() => {
+    resetSocketAuth()
     setToken(null)
     setStoredUser(null)
     setUser(null)

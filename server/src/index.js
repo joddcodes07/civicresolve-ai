@@ -1,10 +1,14 @@
 // CivicResolve-AI API server — Express 5 + Socket.IO + Prisma (PostgreSQL).
 import express from 'express'
+import path from 'node:path'
+import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import http from 'node:http'
 import cors from 'cors'
 import helmet from 'helmet'
 import { Server as SocketServer } from 'socket.io'
 
+import { authenticateToken } from './middleware/auth.js'
 import { env } from './env.js'
 import { prisma, disconnectDb } from './db.js'
 import { setIO, rooms } from './socket.js'
@@ -22,7 +26,7 @@ import issueRoutes from './routes/issues.routes.js'
 import { startSlaCron } from './jobs/slaCron.js'
 
 const app = express()
-app.set('trust proxy', 1)
+app.set('trust proxy', env.trustProxy)
 app.disable('x-powered-by')
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
@@ -46,6 +50,15 @@ app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d', fallthrough: true
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'civicresolve-api', time: new Date().toISOString() }))
 
+app.get('/api/ready', async (_req, res) => {
+  try { await prisma.$queryRaw`SELECT 1`; res.json({ ok: true, database: 'connected' }) }
+  catch { res.status(503).json({ ok: false, database: 'unavailable' }) }
+})
+
+app.use('/api', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store')
+  next()
+})
 app.use('/api', apiLimiter)
 app.use('/api/auth', authLimiter, authRoutes)
 app.use('/api/meta', metaRoutes)
@@ -55,15 +68,28 @@ app.use('/api/officer', officerRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/issues', issueRoutes)
 
+const clientDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist')
+if (env.nodeEnv === 'production' && fs.existsSync(path.join(clientDist, 'index.html'))) {
+  app.use(express.static(clientDist))
+  app.get(/^\/(?!api(?:\/|$)|uploads(?:\/|$)|socket\.io(?:\/|$)).*/, (_req, res) => res.sendFile(path.join(clientDist, 'index.html')))
+}
+
 app.use(notFoundHandler)
 app.use(errorHandler)
 
 const server = http.createServer(app)
 const io = new SocketServer(server, {
-  cors: { origin: true, credentials: true },
+  cors: { origin: env.clientOrigin, credentials: true },
   path: '/socket.io',
 })
 setIO(io)
+
+io.use(async (socket, next) => {
+  try {
+    if (socket.handshake.auth?.token) socket.data.user = await authenticateToken(socket.handshake.auth.token)
+    next()
+  } catch { next(new Error('Authentication required')) }
+})
 
 io.on('connection', (socket) => {
   socket.on('join:complaint', (code) => {
@@ -73,12 +99,12 @@ io.on('connection', (socket) => {
     if (code) socket.leave(rooms.complaint(String(code).toUpperCase()))
   })
   socket.on('join:user', (userId) => {
-    if (userId) socket.join(rooms.user(userId))
+    if (socket.data.user?.id === userId) socket.join(rooms.user(userId))
   })
   socket.on('join:officer', (departmentId) => {
-    if (departmentId) socket.join(rooms.officers(departmentId))
+    if (socket.data.user?.role === 'ADMIN' || (socket.data.user?.role === 'OFFICER' && socket.data.user.departmentId === departmentId)) socket.join(rooms.officers(departmentId))
   })
-  socket.on('join:admin', () => socket.join(rooms.admins))
+  socket.on('join:admin', () => { if (socket.data.user?.role === 'ADMIN') socket.join(rooms.admins) })
 })
 
 server.listen(env.port, () => {

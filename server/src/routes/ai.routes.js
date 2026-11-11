@@ -1,5 +1,7 @@
 // AI preview: the live "understanding card" the citizen sees while typing.
 // Debounced on the client (~1.5s). Nothing is persisted here.
+import multer from 'multer'
+import { transcribeAudio } from '../services/voiceService.js'
 import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../db.js'
@@ -26,7 +28,7 @@ router.post(
   validate(previewSchema),
   asyncHandler(async (req, res) => {
     const { text, lat, lng } = req.body
-    const ai = await classifyComplaint(text, { includeMatched: true })
+    const ai = await classifyComplaint(text, { includeMatched: true, lat, lng })
 
     const now = new Date()
     const priority = getPriority({
@@ -76,6 +78,7 @@ router.post(
         needsReview: ai.needsReview,
         language: ai.language,
         englishText: ai.englishText,
+        translationAvailable: ai.translationAvailable,
         summary: ai.summary,
         routingSource: ai.routingSource,
         slaHours: ai.slaHours,
@@ -89,5 +92,16 @@ router.post(
 )
 
 router.get('/status', requireAuth, (_req, res) => res.json({ status: aiStatus() }))
+
+const audioUpload = multer({
+  storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = new Set(['audio/webm', 'video/webm', 'audio/wav', 'audio/x-wav', 'audio/mpeg', 'audio/mp4', 'audio/ogg', 'audio/flac'])
+    cb(allowed.has(file.mimetype) ? null : Object.assign(new Error('Use a supported audio format'), { status: 400 }), allowed.has(file.mimetype))
+  },
+})
+router.post('/transcribe', requireAuth, audioUpload.single('audio'), validate(z.object({ language: z.enum(['en', 'hi', 'mr']).optional() })), asyncHandler(async (req, res) => {
+  res.json(await transcribeAudio(req.file, req.body.language))
+}))
 
 export default router

@@ -2,24 +2,22 @@ import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { prisma } from '../db.js'
-import { signToken, requireAuth } from '../middleware/auth.js'
+import { signToken, requireAuth, publicUser } from '../middleware/auth.js'
 import { validate } from '../middleware/validate.js'
 import { asyncHandler, HttpError } from '../middleware/error.js'
+import { randomBytes, createHash } from 'node:crypto'
+import { sendEmail } from '../services/notifyService.js'
 import { env } from '../env.js'
+import { googleRoutes } from './google.routes.js'
 
 const router = Router()
-
-const publicUser = (u) => ({
-  id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role,
-  departmentId: u.departmentId, department: u.department?.name || null,
-})
 
 const registerSchema = z
   .object({
     name: z.string().trim().min(2, 'Enter your name').max(80),
     email: z.string().trim().toLowerCase().email('Enter a valid email').optional(),
     phone: z.string().trim().regex(/^[0-9]{10,15}$/, 'Enter a valid phone number').optional(),
-    password: z.string().min(6, 'Password must be at least 6 characters').max(100),
+    password: z.string().min(8, 'Password must be at least 8 characters').max(100),
   })
   .refine((d) => d.email || d.phone, { message: 'Provide an email or a phone number', path: ['email'] })
 
@@ -55,9 +53,10 @@ router.post(
       where: { OR: [{ email: identifier.toLowerCase() }, { phone: identifier }] },
       include: { department: { select: { name: true } } },
     })
-    if (!user) throw new HttpError(401, 'No account found with those details')
-    const ok = await bcrypt.compare(password, user.passwordHash)
-    if (!ok) throw new HttpError(401, 'Incorrect password')
+    const hash = user?.passwordHash || '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'
+    const ok = await bcrypt.compare(password, hash)
+    if (!user?.passwordHash || !ok) throw new HttpError(401, 'Invalid email/phone or password')
+    if (user.role !== 'CITIZEN' && env.workEmailDomains.length && !env.workEmailDomains.includes(user.email?.split('@')[1])) throw new HttpError(403, 'Use an approved work account')
     res.json({ token: signToken(user), user: publicUser(user) })
   }),
 )
@@ -76,7 +75,7 @@ router.get(
 
 // One-click demo logins (development convenience only).
 router.get('/demo-accounts', (_req, res) => {
-  if (env.nodeEnv === 'production') return res.json({ accounts: [] })
+  if (env.nodeEnv === 'production' || process.env.DEMO_ACCOUNTS_ENABLED !== 'true') return res.json({ accounts: [] })
   res.json({
     accounts: [
       { role: 'CITIZEN', name: 'Ramesh Patil', identifier: 'citizen@civic.test', password: 'demo1234', hint: 'Lodge & track complaints' },
@@ -85,5 +84,48 @@ router.get('/demo-accounts', (_req, res) => {
     ],
   })
 })
+
+// No account discovery and no reset secrets in API responses or logs.
+router.post('/forgot-password', validate(z.object({ email: z.string().trim().toLowerCase().email() })), asyncHandler(async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { email: req.body.email } })
+  if (user?.passwordHash && env.mail.enabled) {
+    const token = randomBytes(32).toString('hex')
+    const tokenHash = createHash('sha256').update(token).digest('hex')
+    await prisma.$transaction(async tx => {
+      await tx.passwordResetToken.deleteMany({ where: { userId: user.id } })
+      await tx.passwordResetToken.create({ data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 30 * 60_000) } })
+    })
+    const url = new URL(env.resetUrl)
+    url.searchParams.set('token', token)
+    await sendEmail(user.email, 'CivicResolve password reset', `Reset your password within 30 minutes: ${url}`)
+  }
+  res.json({ message: 'If the account exists, a password reset email will be sent.' })
+}))
+router.post('/reset-password', validate(z.object({ token: z.string().regex(/^[a-f0-9]{64}$/), password: z.string().min(8).max(100) })), asyncHandler(async (req, res) => {
+  const tokenHash = createHash('sha256').update(req.body.token).digest('hex')
+  const passwordHash = await bcrypt.hash(req.body.password, 12)
+  await prisma.$transaction(async tx => {
+    const record = await tx.passwordResetToken.findUnique({ where: { tokenHash } })
+    if (!record) throw new HttpError(400, 'Invalid or expired reset link')
+    const claimed = await tx.passwordResetToken.updateMany({ where: { id: record.id, usedAt: null, expiresAt: { gt: new Date() } }, data: { usedAt: new Date() } })
+    if (claimed.count !== 1) throw new HttpError(400, 'Invalid or expired reset link')
+    await tx.user.update({ where: { id: record.userId }, data: { passwordHash, tokenVersion: { increment: 1 } } })
+    await tx.passwordResetToken.deleteMany({ where: { userId: record.userId } })
+  })
+  res.json({ message: 'Password updated. Please sign in again.' })
+}))
+
+router.get('/notifications', requireAuth, asyncHandler(async (req, res) => {
+  const notifications = await prisma.notification.findMany({ where: { userId: req.user.id, channel: 'IN_APP' }, orderBy: { sentAt: 'desc' }, take: 100 })
+  const unread = await prisma.notification.count({ where: { userId: req.user.id, read: false, channel: 'IN_APP' } })
+  res.json({ notifications, unread })
+}))
+router.patch('/notifications/:id/read', requireAuth, asyncHandler(async (req, res) => {
+  const result = await prisma.notification.updateMany({ where: { id: req.params.id, userId: req.user.id }, data: { read: true } })
+  if (!result.count) throw new HttpError(404, 'Notification not found')
+  res.json({ ok: true })
+}))
+
+router.use('/google', googleRoutes)
 
 export default router

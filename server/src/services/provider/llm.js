@@ -3,6 +3,7 @@
 // upgrade*: if it is not configured or fails, aiService falls back to the local
 // rules classifier, so the product never breaks.
 
+import { z } from 'zod'
 import { env, llmEnabled } from '../../env.js'
 import { CATEGORIES } from '../../data/taxonomy.js'
 import { maskPII } from '../../lib/text.js'
@@ -26,7 +27,7 @@ STRICT JSON only, no prose, using exactly these keys:
 Allowed categories (choose exactly one, verbatim):
 ${CATEGORY_NAMES.join('\n')}
 
-Rules: never invent a category. If unsure, use "Other / General" and set confidence below 0.6.
+Rules: never invent a category. If unsure, use "Other / General" and set confidence below 0.7.
 Examples:
 - "nala block hai, paani bhar gaya" -> category "Blocked Drain", severity 4, confidence 0.9
 - "बच्चे खेल रहे हैं और मैनहोल खुला है" -> category "Open / Missing Manhole", severity 5, safety_risk true`
@@ -152,7 +153,13 @@ export async function classifyWithLLM(text) {
   const masked = maskPII(text)
   const json =
     env.llm.provider === 'gemini' ? await callGemini(masked) : await callOpenAICompatible(masked)
-  if (!json) return null
+  const validated = z.object({
+    category: z.enum(CATEGORY_NAMES), language: z.enum(['en', 'hi', 'mr', 'hinglish']),
+    severity: z.number().int().min(1).max(5), safety_risk: z.boolean(),
+    confidence: z.number().min(0).max(1), english_text: z.string().trim().min(1).max(4000),
+    summary: z.string().max(240),
+  }).safeParse(json)
+  if (!validated.success) return null
 
   const categoryName = CATEGORY_NAMES.includes(json.category) ? json.category : null
   const severity = Math.min(5, Math.max(1, Math.round(Number(json.severity) || 3)))
@@ -163,7 +170,7 @@ export async function classifyWithLLM(text) {
     categoryName,
     severity,
     safetyRisk: Boolean(json.safety_risk),
-    confidence: Math.min(1, Math.max(0, Number(json.confidence) || 0.7)),
+    confidence: Math.min(1, Math.max(0, Number(json.confidence))),
     language: ['en', 'hi', 'mr', 'hinglish'].includes(json.language) ? json.language : 'en',
     englishText: String(json.english_text || text).trim(),
     summary: String(json.summary || '').trim(),

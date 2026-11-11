@@ -1,7 +1,6 @@
 // F4 · Duplicate issue matching.
-// A new complaint joins an existing Issue when ALL four checks pass:
-//   ① same category  ② the older issue is still open
-//   ③ distance ≤ the category radius  ④ text similarity ≥ threshold
+// Possible duplicate: same category, open complaint, within 50 metres and 7 days.
+// Similarity ranks candidates but is not a hard gate for multilingual reports.
 // Distance is haversine (metres); similarity is cosine over token frequencies.
 
 import { prisma } from '../db.js'
@@ -10,7 +9,7 @@ import { cosineSimilarity, tokenize } from '../lib/text.js'
 import { nextIssueCode } from '../lib/ids.js'
 
 export const SIMILARITY_THRESHOLD = 0.8
-const LOOKBACK_DAYS = 14
+const LOOKBACK_DAYS = 7
 const OPEN_STATUSES = ['SUBMITTED', 'ASSIGNED', 'IN_PROGRESS', 'REOPENED', 'NEEDS_REVIEW']
 
 export function textSimilarity(a, b) {
@@ -44,12 +43,13 @@ function boundingBox(lat, lng, radiusMetres) {
  * Find the best duplicate candidate among recent open complaints of the same category.
  * @param {{ categoryId:string, lat:number, lng:number, text:string, radiusMetres?:number }} input
  */
-export async function findDuplicateCandidate({ categoryId, lat, lng, text, radiusMetres = 50 }) {
+export async function findDuplicateCandidate({ categoryId, lat, lng, text, radiusMetres = 50, client = prisma }) {
   if (!categoryId) return null
+  radiusMetres = 50
   const box = boundingBox(lat, lng, radiusMetres)
   const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 3600 * 1000)
 
-  const candidates = await prisma.complaint.findMany({
+  const candidates = await client.complaint.findMany({
     where: {
       categoryId,
       status: { in: OPEN_STATUSES },
@@ -70,7 +70,7 @@ export async function findDuplicateCandidate({ categoryId, lat, lng, text, radiu
     const distanceMetres = haversineMetres(lat, lng, c.lat, c.lng)
     if (distanceMetres > radiusMetres) continue
     const similarity = textSimilarity(text, c.englishText || c.originalText || '')
-    if (similarity < SIMILARITY_THRESHOLD) continue
+    // Same category within 50m in seven days is a possible duplicate, regardless of wording.
     if (!best || similarity > best.similarity) {
       best = { ...c, distanceMetres, similarity }
     }
@@ -83,23 +83,24 @@ export async function findDuplicateCandidate({ categoryId, lat, lng, text, radiu
  * report count) or create a fresh Issue.
  * @returns {{ issueId:string, reportCount:number, merged:boolean, match?:object }}
  */
-export async function resolveIssue({ categoryId, lat, lng, wardId, text, radiusMetres = 50 }) {
-  const match = await findDuplicateCandidate({ categoryId, lat, lng, text, radiusMetres })
+export async function resolveIssue({ categoryId, lat, lng, wardId, text, radiusMetres = 50, client = prisma }) {
+  if (client !== prisma) await client.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`category:${categoryId}`}))`
+  const match = await findDuplicateCandidate({ categoryId, lat, lng, text, radiusMetres, client })
 
   if (match) {
     let issueId = match.issueId
     if (!issueId) {
       // The matched complaint was never grouped — promote it to an issue.
-      const code = await nextIssueCode()
-      const issue = await prisma.issue.create({
+      const code = await nextIssueCode(client)
+      const issue = await client.issue.create({
         data: { code, categoryId, lat: match.lat, lng: match.lng, wardId: match.wardId, reportCount: 2, priority: 0 },
       })
-      await prisma.complaint.update({ where: { id: match.id }, data: { issueId: issue.id } })
+      await client.complaint.update({ where: { id: match.id }, data: { issueId: issue.id } })
       issueId = issue.id
     } else {
-      await prisma.issue.update({ where: { id: issueId }, data: { reportCount: { increment: 1 } } })
+      await client.issue.update({ where: { id: issueId }, data: { reportCount: { increment: 1 } } })
     }
-    const issue = await prisma.issue.findUnique({ where: { id: issueId }, select: { id: true, reportCount: true, code: true } })
+    const issue = await client.issue.findUnique({ where: { id: issueId }, select: { id: true, reportCount: true, code: true } })
     return {
       issueId: issue.id,
       reportCount: issue.reportCount,
@@ -113,8 +114,8 @@ export async function resolveIssue({ categoryId, lat, lng, wardId, text, radiusM
     }
   }
 
-  const code = await nextIssueCode()
-  const issue = await prisma.issue.create({
+  const code = await nextIssueCode(client)
+  const issue = await client.issue.create({
     data: { code, categoryId, lat, lng, wardId: wardId || null, reportCount: 1, priority: 0 },
   })
   return { issueId: issue.id, reportCount: 1, merged: false }

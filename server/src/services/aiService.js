@@ -4,12 +4,13 @@
 // the DB taxonomy -> confidence gate. Any LLM failure silently falls back to the
 // deterministic rules engine so a complaint is never lost.
 
+import { haversineMetres } from '../lib/geo.js'
 import { prisma } from '../db.js'
 import { classifyWithRules, detectSensitivePlace } from './classifier/rules.js'
 import { classifyWithLLM, llmAvailable } from './provider/llm.js'
 
 const FALLBACK_NAME = 'Other / General'
-const CONFIDENCE_GATE = 0.6
+const CONFIDENCE_GATE = 0.7
 
 let categoryCache = null
 let categoryCacheAt = 0
@@ -84,9 +85,18 @@ export async function classifyComplaint(text, opts = {}) {
     }
   }
 
+  if (Number.isFinite(opts.lat) && Number.isFinite(opts.lng)) {
+    const places = await prisma.sensitivePlace.findMany({ where: {
+      lat: { gte: opts.lat - 0.002, lte: opts.lat + 0.002 },
+      lng: { gte: opts.lng - 0.002, lte: opts.lng + 0.002 },
+    } })
+    result.nearSchoolOrHospital ||= places.some(p => haversineMetres(opts.lat, opts.lng, p.lat, p.lng) <= 200)
+  }
+  // Local keyword rules do not translate Hindi/Marathi: require an officer check.
+  const translationUnavailable = result.routingSource === 'rules' && result.language !== 'en'
   const category = result.category
   const department = category?.department || null
-  const needsReview = result.confidence < CONFIDENCE_GATE || !department
+  const needsReview = result.confidence < CONFIDENCE_GATE || !department || translationUnavailable
 
   return {
     categoryId: category?.id || null,
@@ -101,7 +111,8 @@ export async function classifyComplaint(text, opts = {}) {
     confidence: Number(result.confidence.toFixed(3)),
     needsReview,
     language: result.language,
-    englishText: result.englishText,
+    translationAvailable: !translationUnavailable,
+    englishText: translationUnavailable ? null : result.englishText,
     summary: result.summary,
     matched: opts.includeMatched ? result.matched : undefined,
     routingSource: result.routingSource,

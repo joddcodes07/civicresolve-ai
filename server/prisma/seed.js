@@ -118,8 +118,9 @@ async function clean() {
 }
 
 async function main() {
-  console.log('Seeding CivicResolve-AI demo data...')
-  await clean()
+  if (process.env.NODE_ENV === 'production') throw new Error('Demo seeding is disabled in production')
+  console.log('Seeding synthetic demo data. SLA values and square ward boundaries are illustrative, not official PMC data.')
+  if (await prisma.user.count() || await prisma.department.count() || await prisma.complaint.count()) throw new Error('Demo seed only runs on an empty database. Existing data was preserved.')
 
   const passwordHash = await bcrypt.hash('demo1234', 10)
 
