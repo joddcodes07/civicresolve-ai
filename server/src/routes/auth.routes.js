@@ -2,19 +2,15 @@ import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { prisma } from '../db.js'
-import { signToken, requireAuth } from '../middleware/auth.js'
+import { signToken, requireAuth, publicUser } from '../middleware/auth.js'
 import { validate } from '../middleware/validate.js'
 import { asyncHandler, HttpError } from '../middleware/error.js'
 import { randomBytes, createHash } from 'node:crypto'
 import { sendEmail } from '../services/notifyService.js'
 import { env } from '../env.js'
+import { googleRoutes } from './google.routes.js'
 
 const router = Router()
-
-const publicUser = (u) => ({
-  id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role,
-  departmentId: u.departmentId, department: u.department?.name || null,
-})
 
 const registerSchema = z
   .object({
@@ -57,9 +53,9 @@ router.post(
       where: { OR: [{ email: identifier.toLowerCase() }, { phone: identifier }] },
       include: { department: { select: { name: true } } },
     })
-    if (!user) { await bcrypt.compare(password, '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'); throw new HttpError(401, 'Invalid email/phone or password') }
-    const ok = await bcrypt.compare(password, user.passwordHash)
-    if (!ok) throw new HttpError(401, 'Invalid email/phone or password')
+    const hash = user?.passwordHash || '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'
+    const ok = await bcrypt.compare(password, hash)
+    if (!user?.passwordHash || !ok) throw new HttpError(401, 'Invalid email/phone or password')
     if (user.role !== 'CITIZEN' && env.workEmailDomains.length && !env.workEmailDomains.includes(user.email?.split('@')[1])) throw new HttpError(403, 'Use an approved work account')
     res.json({ token: signToken(user), user: publicUser(user) })
   }),
@@ -92,7 +88,7 @@ router.get('/demo-accounts', (_req, res) => {
 // No account discovery and no reset secrets in API responses or logs.
 router.post('/forgot-password', validate(z.object({ email: z.string().trim().toLowerCase().email() })), asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({ where: { email: req.body.email } })
-  if (user && env.mail.enabled) {
+  if (user?.passwordHash && env.mail.enabled) {
     const token = randomBytes(32).toString('hex')
     const tokenHash = createHash('sha256').update(token).digest('hex')
     await prisma.$transaction(async tx => {
@@ -129,5 +125,7 @@ router.patch('/notifications/:id/read', requireAuth, asyncHandler(async (req, re
   if (!result.count) throw new HttpError(404, 'Notification not found')
   res.json({ ok: true })
 }))
+
+router.use('/google', googleRoutes)
 
 export default router

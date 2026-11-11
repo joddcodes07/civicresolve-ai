@@ -151,3 +151,15 @@ A public deployment was not performed because no hosting account/target or produ
 - Reference importer rerun preserves existing rows; three committed migrations applied successfully to the isolated PostgreSQL database.
 
 Provider references: https://console.groq.com/docs/speech-to-text and https://console.groq.com/docs/api-reference . Prisma configuration reference: https://www.prisma.io/docs/orm/reference/prisma-config-reference .
+
+## Enable Google sign-in
+
+In Google Cloud, configure Google Auth Platform and create an OAuth client with application type **Web application**. If the app is in testing, add the Google account you intend to use as a test user. Add this authorized redirect URI for local development:
+
+```
+http://localhost:5173/api/auth/google/callback
+```
+
+Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in the ignored `server/.env`. Set `CLIENT_ORIGIN=http://localhost:5173` and restart the API. In a deployment, use the public HTTPS `CLIENT_ORIGIN` and register that origin followed by `/api/auth/google/callback`. Route `/api` through the same site as the login page for the browser cookies used during sign-in.
+
+Open `/login` and select **Continue with Google**. The first sign-in creates a citizen account. An email already registered in CivicResolve keeps its existing sign-in method. The backend verifies Google's ID token and matches returning Google accounts by their Google subject. The final browser login uses a single-use ticket that expires in one minute.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useI18n } from '../../lib/i18n.jsx'
 import { useAuth } from '../../lib/auth.jsx'
@@ -14,7 +14,7 @@ const ROLE_TONE = { CITIZEN: 'blue', OFFICER: 'saffron', ADMIN: 'violet' }
 
 export default function Login() {
   const { t } = useI18n()
-  const { login, register, user } = useAuth()
+  const { login, loginWithToken, register, user } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
   const location = useLocation()
@@ -24,9 +24,13 @@ export default function Login() {
   const [busy, setBusy] = useState(false)
   const [demo, setDemo] = useState([])
   const [stats, setStats] = useState(null)
+  const [googleEnabled, setGoogleEnabled] = useState(false)
+  const [googleError, setGoogleError] = useState('')
+  const googleHandled = useRef(false)
   const from = location.state?.from || null
 
   useEffect(() => {
+    api.get('/api/auth/google/status').then(({ enabled }) => setGoogleEnabled(enabled)).catch(() => {})
     api.get('/api/meta/stats').then(d => setStats(d.stats)).catch(() => {})
     api.get('/api/auth/demo-accounts').then((d) => setDemo(d.accounts || [])).catch(() => {})
   }, [])
@@ -34,6 +38,29 @@ export default function Login() {
   useEffect(() => {
     if (user) navigate(from || (user.role === 'ADMIN' ? '/admin' : user.role === 'OFFICER' ? '/officer' : '/'), { replace: true })
   }, [user, navigate, from])
+
+  useEffect(() => {
+    const status = new URLSearchParams(location.search).get('google')
+    if (!status || googleHandled.current) return
+    googleHandled.current = true
+    navigate('/login', { replace: true })
+    if (status === 'cancelled') return
+    if (status !== 'complete') {
+      setGoogleError(status === 'existing'
+        ? 'This email already has a CivicResolve account. Sign in with its existing method.'
+        : 'Google sign-in could not finish. Try again.')
+      return
+    }
+    setBusy(true)
+    fetch('/api/auth/google/exchange', { method: 'POST' })
+      .then(async response => {
+        if (!response.ok) throw new Error('Google sign-in expired. Start again.')
+        const session = await response.json()
+        loginWithToken(session.token, session.user)
+      })
+      .catch(error => setGoogleError(error.message))
+      .finally(() => setBusy(false))
+  }, [location.search, loginWithToken, navigate])
 
   function update(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -116,6 +143,15 @@ export default function Login() {
             {busy ? <Spinner /> : mode === 'login' ? t('login.submit') : t('login.register')}
           </Button>
         </form>
+
+        {googleEnabled && (
+          <div className="mt-4 max-w-sm">
+            <Button type="button" block disabled={busy} onClick={() => window.location.assign('/api/auth/google/start')}>
+              Continue with Google
+            </Button>
+          </div>
+        )}
+        {googleError && <p role="alert" className="mt-3 max-w-sm text-sm text-ink-soft">{googleError}</p>}
 
         <button
           onClick={() => setMode(mode === 'login' ? 'register' : 'login')}

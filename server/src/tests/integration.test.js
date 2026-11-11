@@ -9,6 +9,8 @@ test('backend integration against isolated PostgreSQL', { skip: process.env.RUN_
   process.env.LLM_PROVIDER = ''
   process.env.GROQ_API_KEY = ''
   process.env.LLM_API_KEY = ''
+  process.env.GOOGLE_CLIENT_ID = 'test-google-client'
+  process.env.GOOGLE_CLIENT_SECRET = 'test-google-secret'
   const { env } = await import('../env.js')
   if (!new URL(env.databaseUrl).pathname.endsWith('_dhruv') && !new URL(env.databaseUrl).pathname.endsWith('_test')) throw new Error('Integration tests require an isolated database ending _dhruv or _test')
   const { app, server, io, prisma } = await import('../index.js')
@@ -32,6 +34,51 @@ test('backend integration against isolated PostgreSQL', { skip: process.env.RUN_
     const location = { lat: 18.5204, lng: 73.8567 }
     const text = `${tag} There is a deep pothole on the road outside our house.`
     let complaint
+    await t.test('Google sign-in binds the callback to the browser, preserves password accounts and consumes tickets once', async () => {
+      const { OAuth2Client } = await import('google-auth-library')
+      const google = t.mock.method(OAuth2Client.prototype, 'getToken', async () => ({ tokens: { id_token: 'test-id-token' } }))
+      let profile = {}
+      t.mock.method(OAuth2Client.prototype, 'verifyIdToken', async () => ({ getPayload: () => profile }))
+      const origin = new URL(env.clientOrigin).origin
+      const start = async () => {
+        const response = await fetch(`${base}/api/auth/google/start`, { redirect: 'manual' })
+        const authorize = new URL(response.headers.get('location'))
+        assert.equal(authorize.origin, 'https://accounts.google.com')
+        assert.equal(authorize.searchParams.get('code_challenge_method'), 'S256')
+        const cookie = response.headers.getSetCookie().find(value => value.startsWith('civic_google_state='))
+        assert.match(cookie, /HttpOnly/i)
+        return { state: authorize.searchParams.get('state'), nonce: authorize.searchParams.get('nonce'), cookie: cookie.split(';')[0] }
+      }
+      const callback = (flow, state = flow.state) => fetch(`${base}/api/auth/google/callback?code=mock-code&state=${state}`, {
+        headers: { Cookie: flow.cookie }, redirect: 'manual',
+      })
+      const flow = await start()
+      const mismatch = await callback(flow, 'mismatched-state')
+      assert.equal(mismatch.headers.get('location'), `${origin}/login?google=expired`)
+      assert.equal(google.mock.callCount(), 0)
+      profile = { sub: `${tag}-google`, nonce: flow.nonce, email: a.user.email, email_verified: true }
+      assert.equal((await callback(flow)).headers.get('location'), `${origin}/login?google=existing`)
+
+      const newFlow = await start()
+      profile = { ...profile, nonce: newFlow.nonce, email: `${tag}-google@example.test`, name: 'Google Test Citizen' }
+      const completed = await callback(newFlow)
+      assert.equal(completed.headers.get('location'), `${origin}/login?google=complete`)
+      const ticket = completed.headers.getSetCookie().find(value => /^civic_google_ticket=[\w-]{43};/.test(value))
+      assert.match(ticket, /HttpOnly/i)
+      const account = await prisma.user.findUniqueOrThrow({ where: { googleSubject: profile.sub } })
+      users.push(account.id)
+      assert.equal(account.passwordHash, null)
+      const exchange = (requestOrigin) => fetch(`${base}/api/auth/google/exchange`, {
+        method: 'POST', headers: { Origin: requestOrigin, Cookie: ticket.split(';')[0] },
+      })
+      assert.equal((await exchange('https://untrusted.example')).status, 403)
+      const results = await Promise.all([exchange(origin), exchange(origin)])
+      assert.deepEqual(results.map(result => result.status).sort(), [200, 401])
+      const signedIn = await results.find(result => result.ok).json()
+      assert.equal(signedIn.user.role, 'CITIZEN')
+      assert.equal((await request('/api/auth/me', { token: signedIn.token })).body.user.id, account.id)
+      assert.equal((await request('/api/admin/overview', { token: signedIn.token })).status, 403)
+    })
     await t.test('anonymous and bad-session submissions are denied', async () => {
       assert.equal((await request('/api/complaints', { method: 'POST', body: { text, ...location } })).status, 401)
       assert.equal((await request('/api/complaints', { method: 'POST', token: 'invalid', body: { text, ...location } })).status, 401)

@@ -3,6 +3,11 @@ import jwt from 'jsonwebtoken'
 import { prisma } from '../db.js'
 import { env } from '../env.js'
 
+export const publicUser = (u) => ({
+  id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role,
+  departmentId: u.departmentId, department: u.department?.name || null,
+})
+
 export function signToken(user) {
   return jwt.sign({ sub: user.id, role: user.role, ver: user.tokenVersion || 0 }, env.jwt.secret, { expiresIn: env.jwt.expiresIn })
 }

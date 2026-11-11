@@ -54,7 +54,9 @@ model User {
   phone        String?  @unique
   tokenVersion Int @default(0)
   resetTokens PasswordResetToken[]
-  passwordHash String
+  passwordHash String?
+  googleSubject String? @unique
+  googleLoginTickets GoogleLoginTicket[]
   role         Role     @default(CITIZEN)
   createdAt    DateTime @default(now())
 
@@ -302,4 +304,13 @@ model SensitivePlace {
   lng Float
   sourceUrl String
   @@index([lat, lng])
+}
+
+model GoogleLoginTicket {
+  tokenHash String @id
+  userId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }

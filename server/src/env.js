@@ -30,6 +30,11 @@ export const env = {
   resetUrl: process.env.PASSWORD_RESET_URL || 'http://localhost:5173/reset-password',
   workEmailDomains: (process.env.WORK_EMAIL_DOMAINS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
 
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  },
+
   llm: {
     provider: String(process.env.LLM_PROVIDER || (process.env.GROQ_API_KEY ? 'groq' : '')).trim().toLowerCase(),
     apiKey: process.env.GROQ_API_KEY || process.env.LLM_API_KEY || '',
@@ -54,7 +59,7 @@ export const env = {
 }
 
 export const isProd = env.nodeEnv === 'production'
-if (isProd && (env.jwt.secret.length < 32 || env.jwt.secret.includes('change-me'))) throw new Error('Set a random JWT_SECRET of at least 32 characters')
+if (isProd && (!process.env.JWT_SECRET || env.jwt.secret.length < 32 || env.jwt.secret.includes('change-me'))) throw new Error('Set a random JWT_SECRET of at least 32 characters')
 if (isProd && !env.databaseUrl) throw new Error('DATABASE_URL is required')
 if (isProd && !env.resetUrl.startsWith('https://')) throw new Error('PASSWORD_RESET_URL must use HTTPS')
 
