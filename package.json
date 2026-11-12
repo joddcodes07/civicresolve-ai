@@ -4,6 +4,7 @@
   "private": true,
   "description": "CivicResolve-AI — an AI-based single window to lodge and track citizen grievances across multiple departments (PS #343). Route it right · Track it live · Prove it's fixed.",
   "type": "module",
+  "main": "electron/main.cjs",
   "workspaces": [
     "server",
     "client"
@@ -18,11 +19,15 @@
     "dev": "concurrently -k -n api,web -c blue,magenta \"npm --workspace server run dev\" \"npm --workspace client run dev\"",
     "dev:api": "npm --workspace server run dev",
     "dev:web": "npm --workspace client run dev",
+    "desktop:dev": "concurrently -k -n api,web,electron -c blue,magenta,green \"npm --workspace server run dev\" \"npm --workspace client run dev -- --host 127.0.0.1 --port 5173 --strictPort\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "build": "npm --workspace client run build",
     "test": "npm --workspace server run test"
   },
   "devDependencies": {
-    "concurrently": "^10.0.6"
+    "concurrently": "^10.0.6",
+    "electron": "^45.3.1",
+    "electron-builder": "^26.18.0",
+    "wait-on": "^9.5.1"
   },
   "engines": {
     "node": ">=22"
