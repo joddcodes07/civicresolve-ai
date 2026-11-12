@@ -41,7 +41,12 @@ export default function Chat() {
   }
 
   async function handleSend(rawText) {
+    if (thinking || state === 'done') return
     const value = (rawText ?? input).trim()
+    if (state === 'ask_problem' && value.length < 10) {
+      toast(t('chat.minDescription'), { tone: 'amber' })
+      return
+    }
     if (!value && state !== 'ask_photo') return
     if (value) setMessages((prev) => [...prev, { role: 'user', text: value }])
     setInput('')
@@ -54,7 +59,8 @@ export default function Chat() {
         say(t('chat.askLocation', { category: data.ai.categoryName, department: data.ai.departmentName }))
         setState('ask_location')
       } catch {
-        say(t('common.somethingWrong'))
+        setInput(value)
+        say(t('chat.previewUnavailable'))
       } finally {
         setThinking(false)
       }
@@ -137,7 +143,11 @@ export default function Chat() {
           ]
         : state === 'confirm'
           ? [{ label: t('chat.quickSubmit'), onClick: () => handleSend(t('chat.quickSubmit')), primary: true }]
-          : []
+          : state === 'ask_problem'
+            ? ['chat.exampleRoad', 'chat.exampleLight', 'chat.exampleWaste'].map((key) => ({
+                label: t(key), onClick: () => setInput(t(`${key}Text`)),
+              }))
+            : []
 
   return (
     <div className="frame py-10">
@@ -186,6 +196,8 @@ export default function Chat() {
                 {chips.map((chip) => (
                   <button
                     key={chip.label}
+                    type="button"
+                    disabled={thinking}
                     onClick={chip.onClick}
                     className={`pill border ${chip.primary ? 'border-saffron bg-saffron text-white' : 'border-line bg-card text-ink-soft hover:border-line-strong'}`}
                   >
@@ -210,7 +222,7 @@ export default function Chat() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={t('chat.placeholder')}
                 className="field flex-1"
-                disabled={state === 'done'}
+                disabled={thinking || state === 'done'}
               />
               <Button type="submit" variant="solid" size="sm" disabled={thinking || state === 'done'} icon={<IconSend size={15} />} />
               <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPhotoPicked} />

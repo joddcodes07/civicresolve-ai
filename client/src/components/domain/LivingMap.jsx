@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { BAND_HEX } from '../../lib/mapPins.js'
+import { issueColor } from '../../lib/mapPins.js'
+import { useI18n } from '../../lib/i18n.jsx'
 import { Pill, BandPill, PriorityScore } from '../ui/Pills.jsx'
 import { formatDateTime } from '../../lib/format.js'
 
@@ -17,7 +18,8 @@ function project(lat, lng) {
  * highlighted one opens a glass data card. A pure-CSS/SVG scene (no map tiles)
  * so it is fast, animated, and unmistakably ours.
  */
-export function LivingMap({ issues = [] }) {
+export function LivingMap({ issues = [], demo = false }) {
+  const { t } = useI18n()
   const [active, setActive] = useState(null)
 
   const pins = useMemo(() => {
@@ -65,7 +67,7 @@ export function LivingMap({ issues = [] }) {
 
           {/* pins */}
           {pins.map((pin) => {
-            const color = BAND_HEX[pin.priorityBand] || BAND_HEX.normal
+            const color = issueColor(pin)
             const isActive = pin.id === active
             return (
               <button
@@ -112,7 +114,7 @@ export function LivingMap({ issues = [] }) {
             <Pill tone={selected.status === 'RESOLVED' ? 'green' : 'blue'}>{selected.status}</Pill>
           </div>
           <div className="hair-t mt-3 flex items-center justify-between pt-3">
-            <span className="label">Reported {formatDateTime(selected.createdAt)}</span>
+            <span className="label">{demo ? t('common.demo') : `Reported ${formatDateTime(selected.createdAt)}`}</span>
             <button onClick={() => setActive(null)} className="label text-ink-soft hover:text-ink">
               Close
             </button>
@@ -122,7 +124,7 @@ export function LivingMap({ issues = [] }) {
 
       {!selected && pins.length > 0 && (
         <div className="pointer-events-none absolute bottom-4 left-4 z-20">
-          <span className="pill border-line bg-paper/80 text-ink-soft backdrop-blur">Tap a pin to see the issue</span>
+          <span className="pill border-line bg-paper/80 text-ink-soft backdrop-blur">{demo ? t('map.demoTap') : 'Tap a pin to see the issue'}</span>
         </div>
       )}
     </div>

@@ -24,6 +24,11 @@ export function pinIcon({ band = 'normal', text = '', color, size = 30 }) {
 
 export const BAND_HEX = BAND_COLOR
 
+export function issueColor(issue) {
+  if (issue.status === 'RESOLVED' || issue.status === 'CONFIRMED') return BAND_COLOR.verified
+  return BAND_COLOR[issue.priorityBand] || BAND_COLOR.normal
+}
+
 export function dotIcon({ color = '#2f5bea', size = 14, pulse = false }) {
   return L.divIcon({
     className: 'civic-dot',

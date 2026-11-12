@@ -5,7 +5,7 @@ import { SectionLabel, Skeleton } from '../../components/ui/Primitives.jsx'
 import { Pill, BandPill } from '../../components/ui/Pills.jsx'
 import { Tabs } from '../../components/ui/Tabs.jsx'
 import { IssueMap } from '../../components/domain/IssueMap.jsx'
-import { TONE_DOT } from '../../lib/format.js'
+import { BAND_HEX } from '../../lib/mapPins.js'
 import { timeAgo } from '../../lib/format.js'
 
 const FILTERS = [
@@ -19,15 +19,15 @@ export default function PublicMap() {
   const { t } = useI18n()
   const [filter, setFilter] = useState('all')
   const [heat, setHeat] = useState(false)
-  const { data, loading } = useFetch('/api/issues/map')
+  const { data, loading, error, reload } = useFetch('/api/issues/map?demo=1')
 
   const issues = data?.issues || []
-  const filtered = useMemo(() => (filter === 'all' ? issues : issues.filter((i) => i.priorityBand === filter)), [issues, filter])
+  const filtered = useMemo(() => (filter === 'all' ? issues : issues.filter((i) => i.priorityBand === filter || (filter === 'normal' && i.priorityBand === 'low'))), [issues, filter])
   const top = useMemo(() => [...filtered].sort((a, b) => b.reportCount - a.reportCount).slice(0, 12), [filtered])
 
   return (
     <div className="frame py-10">
-      <SectionLabel index={7} right={<Pill tone="blue">{filtered.length} {t('map.issues')}</Pill>}>
+      <SectionLabel index={7} right={data && !error && <Pill tone="blue">{filtered.length} {t(data.demo ? 'map.demoIssues' : 'map.issues')}</Pill>}>
         {t('map.title')}
       </SectionLabel>
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -35,6 +35,7 @@ export default function PublicMap() {
         <div className="flex flex-wrap items-center gap-3">
           <Tabs tabs={FILTERS} value={filter} onChange={setFilter} />
           <button
+            aria-pressed={heat}
             onClick={() => setHeat((v) => !v)}
             className={`pill border ${heat ? 'border-ink bg-ink text-paper' : 'border-line text-ink-soft'}`}
           >
@@ -43,19 +44,28 @@ export default function PublicMap() {
         </div>
       </div>
 
+      {data?.demo && <p className="mt-4 text-sm text-ink-soft">{t('map.demoNote')}</p>}
+      {error && (
+        <div role="status" className="card mt-6 flex flex-wrap items-center gap-3 p-4">
+          <span>{t('map.unavailable')}</span>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => reload().catch(() => {})}>{t('map.retry')}</button>
+        </div>
+      )}
+
       <div className="mt-8 grid gap-6 lg:grid-cols-12">
         <div className="lg:col-span-8">
-          {loading ? <Skeleton className="h-[520px] w-full" /> : <IssueMap issues={filtered} height={520} heat={heat} />}
+          {loading ? <Skeleton className="h-[520px] w-full" /> : <IssueMap issues={filtered} height={520} heat={heat} demo={data?.demo} />}
           <div className="mt-4 flex flex-wrap items-center gap-4">
             <span className="label">{t('map.legend')}</span>
             {[
-              ['urgent', t('map.urgent')],
-              ['high', t('map.due')],
-              ['normal', t('map.track')],
-              ['low', 'Resolved soon'],
+              ['urgent', t('map.priorityUrgent')],
+              ['high', t('map.priorityHigh')],
+              ['normal', t('map.priorityNormal')],
+              ['low', t('map.priorityLow')],
+              ['verified', t('map.resolved')],
             ].map(([band, label]) => (
               <span key={band} className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 rounded-full ${TONE_DOT[band === 'high' ? 'saffron' : band] || 'bg-ink-soft'}`} />
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: BAND_HEX[band] }} />
                 <span className="label">{label}</span>
               </span>
             ))}
@@ -80,11 +90,11 @@ export default function PublicMap() {
                   </div>
                   <div className="mt-2 flex items-center gap-2">
                     <BandPill band={issue.priorityBand} score={issue.priority} />
-                    <span className="label">{timeAgo(issue.createdAt)}</span>
+                    <span className="label">{data?.demo ? t('common.demo') : timeAgo(issue.createdAt)}</span>
                   </div>
                 </div>
               ))}
-              {top.length === 0 && <div className="p-5 text-[13px] text-ink-soft">No issues match this filter.</div>}
+              {!loading && !error && top.length === 0 && <div className="p-5 text-[13px] text-ink-soft">No issues match this filter.</div>}
             </div>
           </div>
         </div>

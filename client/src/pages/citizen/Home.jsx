@@ -45,11 +45,12 @@ export default function Home() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const [code, setCode] = useState('')
-  const { data: statsData } = useFetch('/api/meta/stats')
-  const { data: issueData } = useFetch('/api/issues/map')
+  const { data: statsData, loading: statsLoading, error: statsError } = useFetch('/api/meta/stats?demo=1')
+  const { data: issueData } = useFetch('/api/issues/map?demo=1')
   const { data: deptData } = useFetch('/api/meta/departments')
 
   const stats = statsData?.stats || {}
+  const demo = statsData?.demoStats
   const issues = issueData?.issues || []
   const departments = deptData?.departments || []
 
@@ -112,7 +113,7 @@ export default function Home() {
 
             <div className="lg:col-span-7">
               <Reveal delay={200}>
-                <LivingMap issues={issues} />
+                <LivingMap issues={issues} demo={issueData?.demo} />
               </Reveal>
             </div>
           </div>
@@ -132,15 +133,21 @@ export default function Home() {
 
       {/* ---------------- LIVE COUNTERS ---------------- */}
       <section className="frame py-14">
-        <SectionLabel index={1} right={<Pill tone="green" dot>Live</Pill>}>
-          {t('home.liveTitle')}
+        <SectionLabel index={1} right={statsData && <Pill tone={demo ? 'blue' : 'green'} dot>{demo ? t('common.demo') : 'Live'}</Pill>}>
+          {demo ? t('home.demoTitle') : t('home.liveTitle')}
         </SectionLabel>
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-          <Counter value={stats.total || 0} label={t('home.statComplaints')} />
-          <Counter value={stats.verifiedRate || 0} label={t('home.statVerified')} suffix="%" />
-          <Counter value={stats.verified || 0} label="Citizen-verified fixes" />
-          <Counter value={stats.departments || 14} label={t('home.statDepartments')} />
-        </div>
+        {statsError ? (
+          <p role="status" className="text-ink-soft">{t('home.statsUnavailable')}</p>
+        ) : statsLoading || !statsData ? (
+          <p role="status" className="text-ink-soft">{t('home.statsLoading')}</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+            <Counter value={demo?.total ?? stats.thisMonth ?? stats.total} label={t(demo ? 'home.demoComplaints' : 'home.statComplaints')} />
+            <Counter value={demo?.verifiedRate ?? stats.verifiedRate} label={t('home.statVerified')} suffix="%" />
+            <Counter value={demo?.verified ?? stats.verified} label="Citizen-verified fixes" />
+            <Counter value={stats.departments} label={t('home.statDepartments')} />
+          </div>
+        )}
       </section>
 
       {/* ---------------- HOW IT WORKS ---------------- */}

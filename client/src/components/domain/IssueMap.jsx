@@ -1,11 +1,11 @@
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { pinIcon, dotIcon, BAND_HEX } from '../../lib/mapPins.js'
-import { PriorityScore } from '../ui/Pills.jsx'
-import { Link } from 'react-router-dom'
+import { pinIcon, issueColor } from '../../lib/mapPins.js'
+import { useI18n } from '../../lib/i18n.jsx'
 
 /** Public issue map: one pin per grouped Issue, the badge is the merged report count. */
-export function IssueMap({ issues = [], center = [18.5204, 73.8567], zoom = 12, height = 460, heat = false, onSelect }) {
+export function IssueMap({ issues = [], center = [18.5204, 73.8567], zoom = 12, height = 460, heat = false, demo = false, onSelect }) {
+  const { t } = useI18n()
   return (
     <div className="overflow-hidden rounded-xl border border-line" style={{ height }}>
       <MapContainer center={center} zoom={zoom} scrollWheelZoom style={{ height: '100%', width: '100%' }}>
@@ -20,8 +20,8 @@ export function IssueMap({ issues = [], center = [18.5204, 73.8567], zoom = 12, 
                 center={[issue.lat, issue.lng]}
                 radius={Math.min(900, 180 + (issue.reportCount || 1) * 120)}
                 pathOptions={{
-                  color: BAND_HEX[issue.priorityBand] || BAND_HEX.normal,
-                  fillColor: BAND_HEX[issue.priorityBand] || BAND_HEX.normal,
+                  color: issueColor(issue),
+                  fillColor: issueColor(issue),
                   fillOpacity: 0.16,
                   weight: 1,
                 }}
@@ -31,12 +31,12 @@ export function IssueMap({ issues = [], center = [18.5204, 73.8567], zoom = 12, 
               <Marker
                 key={issue.id}
                 position={[issue.lat, issue.lng]}
-                icon={pinIcon({ band: issue.priorityBand, text: String(issue.reportCount || 1) })}
+                icon={pinIcon({ color: issueColor(issue), text: String(issue.reportCount || 1) })}
                 eventHandlers={{ click: () => onSelect?.(issue) }}
               >
                 <Popup>
                   <div className="min-w-[190px]">
-                    <div className="mono text-[11px] tracking-wider text-ink-faint">{issue.code}</div>
+                    <div className="mono text-[11px] tracking-wider text-ink-faint">{issue.code}{demo && ` · ${t('common.demo')}`}</div>
                     <div className="mt-1 font-medium">{issue.category?.name || 'Issue'}</div>
                     <div className="mt-1 text-[12px] text-ink-soft">
                       {issue.department?.name} · {issue.ward?.name}

@@ -4,6 +4,7 @@ import { Router } from 'express'
 import { prisma } from '../db.js'
 import { asyncHandler } from '../middleware/error.js'
 import { CITY } from '../data/taxonomy.js'
+import { getDemoIssues, getDemoStats } from '../data/demoIssues.js'
 import { aiStatus } from '../services/aiService.js'
 import { CLOSED_STATUSES } from '../lib/constants.js'
 
@@ -60,19 +61,26 @@ router.get('/city', (_req, res) => {
 
 router.get(
   '/stats',
-  asyncHandler(async (_req, res) => {
-    const [total, resolvedOrConfirmed, departments, wards, openCount, issues] = await Promise.all([
+  asyncHandler(async (req, res) => {
+    const puneOffset = 330 * 60_000
+    const today = new Date(Date.now() + puneOffset)
+    const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1) - puneOffset)
+    const [total, resolvedOrConfirmed, departments, wards, openCount, issues, verified, thisMonth] = await Promise.all([
       prisma.complaint.count(),
       prisma.complaint.count({ where: { status: { in: CLOSED_STATUSES } } }),
       prisma.department.count(),
       prisma.ward.count(),
       prisma.complaint.count({ where: { status: { notIn: CLOSED_STATUSES } } }),
       prisma.issue.count(),
+      prisma.complaint.count({ where: { status: 'CONFIRMED' } }),
+      prisma.complaint.count({ where: { createdAt: { gte: monthStart } } }),
     ])
-    const verified = await prisma.complaint.count({ where: { status: 'CONFIRMED' } })
+    const demoStats = req.query.demo === '1' && total === 0 ? getDemoStats(await getDemoIssues()) : null
     res.json({
+      demoStats: demoStats?.total ? demoStats : null,
       stats: {
         total,
+        thisMonth,
         languages: 3,
         formulas: 7,
         resolved: resolvedOrConfirmed,
