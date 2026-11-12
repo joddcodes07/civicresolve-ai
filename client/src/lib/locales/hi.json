@@ -284,6 +284,8 @@
   "departments.sub": "कौन क्या संभालता है, और कितना समय मिलता है।",
   "departments.sla": "{hours} घंटे की समय-सीमा",
   "departments.categories": "{n} श्रेणियाँ",
+  "common.showDemo": "नमूना डेटा दिखाएँ",
+  "common.showLive": "लाइव डेटा दिखाएँ",
   "common.demo": "नमूना डेटा",
   "home.demoTitle": "पुणे का नमूना अवलोकन",
   "home.demoComplaints": "नमूना शिकायतें",

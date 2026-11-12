@@ -35,13 +35,14 @@ router.get(
       }
     }
 
-    let issues = await prisma.issue.findMany({
+    const preview = req.query.demo === 'preview'
+    let issues = preview ? [] : await prisma.issue.findMany({
       where,
       include: { category: { include: { department: true } }, ward: true },
       orderBy: [{ reportCount: 'desc' }, { updatedAt: 'desc' }],
       take: 800,
     })
-    const demo = req.query.demo === '1' && issues.length === 0 && await prisma.complaint.count() === 0
+    const demo = preview || (req.query.demo === '1' && issues.length === 0 && await prisma.complaint.count() === 0)
     if (demo) {
       issues = (await getDemoIssues()).filter((issue) =>
         (status ? issue.status === status : issue.status !== 'CONFIRMED') &&

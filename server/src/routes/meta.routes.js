@@ -75,7 +75,8 @@ router.get(
       prisma.complaint.count({ where: { status: 'CONFIRMED' } }),
       prisma.complaint.count({ where: { createdAt: { gte: monthStart } } }),
     ])
-    const demoStats = req.query.demo === '1' && total === 0 ? getDemoStats(await getDemoIssues()) : null
+    const demo = req.query.demo === 'preview' || (req.query.demo === '1' && total === 0)
+    const demoStats = demo ? getDemoStats(await getDemoIssues()) : null
     res.json({
       demoStats: demoStats?.total ? demoStats : null,
       stats: {

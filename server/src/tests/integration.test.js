@@ -126,6 +126,13 @@ test('backend integration against isolated PostgreSQL', { skip: process.env.RUN_
       assert.equal((await request('/api/issues/map?demo=1&priority=constructor')).status, 400)
       assert.equal((await request('/api/issues/map?demo=1')).body.demo, false)
       assert.equal((await request('/api/meta/stats?demo=1')).body.demoStats, null)
+      const demo = await request('/api/issues/map?demo=preview')
+      assert.equal(demo.body.demo, true)
+      assert.ok(demo.body.issues.length > 0)
+      assert.ok(demo.body.issues.every(issue => issue.code.startsWith('DEMO-')))
+      const { body } = await request('/api/meta/stats?demo=preview')
+      assert.ok(body.stats.total > 0)
+      assert.ok(body.demoStats.total > 0)
     })
     await t.test('duplicates use distance/category/seven days without text overlap', async () => {
       const { findDuplicateCandidate } = await import('../services/dupService.js')

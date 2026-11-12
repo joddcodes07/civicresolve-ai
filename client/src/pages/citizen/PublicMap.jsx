@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useI18n } from '../../lib/i18n.jsx'
 import { useFetch } from '../../hooks/useFetch.js'
 import { SectionLabel, Skeleton } from '../../components/ui/Primitives.jsx'
@@ -19,7 +20,10 @@ export default function PublicMap() {
   const { t } = useI18n()
   const [filter, setFilter] = useState('all')
   const [heat, setHeat] = useState(false)
-  const { data, loading, error, reload } = useFetch('/api/issues/map?demo=1')
+  const [params] = useSearchParams()
+  const preview = params.get('demo') === '1'
+  const demoMode = preview ? 'preview' : '1'
+  const { data, loading, error, reload } = useFetch(`/api/issues/map?demo=${demoMode}`)
 
   const issues = data?.issues || []
   const filtered = useMemo(() => (filter === 'all' ? issues : issues.filter((i) => i.priorityBand === filter || (filter === 'normal' && i.priorityBand === 'low'))), [issues, filter])
@@ -33,6 +37,11 @@ export default function PublicMap() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="max-w-xl font-display text-4xl tracking-tight">{t('map.sub')}</h1>
         <div className="flex flex-wrap items-center gap-3">
+          {(preview || (data && !data.demo)) && (
+            <Link to={preview ? '/map' : '/map?demo=1'} preventScrollReset className="pill border border-line text-blue">
+              {t(preview ? 'common.showLive' : 'common.showDemo')}
+            </Link>
+          )}
           <Tabs tabs={FILTERS} value={filter} onChange={setFilter} />
           <button
             aria-pressed={heat}

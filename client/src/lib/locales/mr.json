@@ -284,6 +284,8 @@
   "departments.sub": "कोण काय सांभाळते, आणि किती वेळ मिळतो.",
   "departments.sla": "{hours} तासांची मुदत",
   "departments.categories": "{n} श्रेणी",
+  "common.showDemo": "नमुना डेटा दाखवा",
+  "common.showLive": "प्रत्यक्ष डेटा दाखवा",
   "common.demo": "नमुना डेटा",
   "home.demoTitle": "पुण्याचा नमुना आढावा",
   "home.demoComplaints": "नमुना तक्रारी",

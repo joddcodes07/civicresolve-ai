@@ -284,6 +284,8 @@
   "departments.sub": "Who handles what, and how long they have.",
   "departments.sla": "{hours}h deadline",
   "departments.categories": "{n} categories",
+  "common.showDemo": "Show demo data",
+  "common.showLive": "Show live data",
   "common.demo": "Demo data",
   "home.demoTitle": "Pune demo overview",
   "home.demoComplaints": "Sample complaints",

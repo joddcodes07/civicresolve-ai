@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useI18n } from '../../lib/i18n.jsx'
 import { useFetch } from '../../hooks/useFetch.js'
 import { useCountUp } from '../../hooks/useMotion.js'
@@ -45,8 +45,11 @@ export default function Home() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const [code, setCode] = useState('')
-  const { data: statsData, loading: statsLoading, error: statsError } = useFetch('/api/meta/stats?demo=1')
-  const { data: issueData } = useFetch('/api/issues/map?demo=1')
+  const [params] = useSearchParams()
+  const preview = params.get('demo') === '1'
+  const demoMode = preview ? 'preview' : '1'
+  const { data: statsData, loading: statsLoading, error: statsError } = useFetch(`/api/meta/stats?demo=${demoMode}`)
+  const { data: issueData } = useFetch(`/api/issues/map?demo=${demoMode}`)
   const { data: deptData } = useFetch('/api/meta/departments')
 
   const stats = statsData?.stats || {}
@@ -147,6 +150,11 @@ export default function Home() {
             <Counter value={demo?.verified ?? stats.verified} label="Citizen-verified fixes" />
             <Counter value={stats.departments} label={t('home.statDepartments')} />
           </div>
+        )}
+        {statsData?.stats?.total > 0 && (
+          <Link to={preview ? '/' : '/?demo=1'} preventScrollReset className="link-sweep mt-6 inline-block text-sm text-blue">
+            {t(preview ? 'common.showLive' : 'common.showDemo')}
+          </Link>
         )}
       </section>
 
