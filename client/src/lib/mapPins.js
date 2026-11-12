@@ -9,13 +9,13 @@ const BAND_COLOR = {
 }
 
 /** A shaped map pin as an inline divIcon (avoids Leaflet's default asset issues). */
-export function pinIcon({ band = 'normal', text = '', color, size = 30 }) {
+export function pinIcon({ band = 'normal', text = '', color, demo = false, size = 30 }) {
   const fill = color || BAND_COLOR[band] || BAND_COLOR.normal
   const label = text ? `<span>${text}</span>` : ''
   const fontSize = String(text).length > 2 ? 9 : 11
   return L.divIcon({
     className: 'civic-pin',
-    html: `<div class="map-pin" style="background:${fill};width:${size}px;height:${size}px;font-size:${fontSize}px">${label}</div>`,
+    html: `<div class="map-pin${demo ? ' map-pin-demo' : ''}" style="background:${fill};width:${size}px;height:${size}px;font-size:${fontSize}px">${label}</div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size],
     popupAnchor: [0, -size],
@@ -23,6 +23,11 @@ export function pinIcon({ band = 'normal', text = '', color, size = 30 }) {
 }
 
 export const BAND_HEX = BAND_COLOR
+
+export function issueColor(issue) {
+  if (issue.status === 'RESOLVED' || issue.status === 'CONFIRMED') return BAND_COLOR.verified
+  return BAND_COLOR[issue.priorityBand] || BAND_COLOR.normal
+}
 
 export function dotIcon({ color = '#2f5bea', size = 14, pulse = false }) {
   return L.divIcon({

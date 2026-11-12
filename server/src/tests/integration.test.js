@@ -30,6 +30,22 @@ test('backend integration against isolated PostgreSQL', { skip: process.env.RUN_
     return r.body
   }
   try {
+    await t.test('empty city previews demos only on request and keeps live counts empty', { skip: await prisma.complaint.count() !== 0 }, async () => {
+      const map = await request('/api/issues/map?demo=1')
+      const stats = await request('/api/meta/stats?demo=1')
+      assert.equal(map.status, 200)
+      assert.equal(map.body.demo, true)
+      assert.ok(map.body.issues.length > 0)
+      assert.ok(map.body.issues.every(issue => issue.code.startsWith('DEMO-')))
+      assert.equal(map.body.issues.length, map.body.heatmap.length)
+      assert.equal(stats.body.stats.total, 0)
+      assert.ok(stats.body.demoStats.total > 0)
+      const urgent = await request('/api/issues/map?demo=1&priority=urgent')
+      assert.ok(urgent.body.issues.length > 0)
+      assert.ok(urgent.body.issues.every(issue => issue.priorityBand === 'urgent'))
+      assert.deepEqual((await request('/api/issues/map')).body.issues, [])
+      assert.equal(await prisma.issue.count(), 0)
+    })
     const a = await register('a'), b = await register('b')
     const location = { lat: 18.5204, lng: 73.8567 }
     const text = `${tag} There is a deep pothole on the road outside our house.`
@@ -107,6 +123,23 @@ test('backend integration against isolated PostgreSQL', { skip: process.env.RUN_
       const r = await request('/api/issues/map?priority=normal')
       assert.equal(r.status, 200); assert.ok(Array.isArray(r.body.heatmap))
       assert.equal((await request('/api/issues/map?bbox=oops')).status, 400)
+      assert.equal((await request('/api/issues/map?demo=1&priority=constructor')).status, 400)
+      assert.equal((await request('/api/issues/map?demo=1')).body.demo, false)
+      assert.equal((await request('/api/meta/stats?demo=1')).body.demoStats, null)
+      const demo = await request('/api/issues/map?demo=preview')
+      assert.equal(demo.body.demo, true)
+      assert.ok(demo.body.issues.length > 0)
+      assert.ok(demo.body.issues.every(issue => issue.code.startsWith('DEMO-')))
+      const { body } = await request('/api/meta/stats?demo=preview')
+      assert.ok(body.stats.total > 0)
+      assert.ok(body.demoStats.total > 0)
+      const mixed = await request('/api/issues/map?demo=mixed')
+      assert.ok(mixed.body.issues.some(issue => issue.demo && issue.code.startsWith('DEMO-')))
+      assert.ok(mixed.body.issues.some(issue => !issue.demo && issue.code.startsWith('ISS-')))
+      assert.ok(mixed.body.heatmap.some(point => point.demo))
+      const mixedStats = await request('/api/meta/stats?demo=mixed')
+      assert.deepEqual(mixedStats.body, body)
+      assert.ok((await request('/api/issues/map?demo=0')).body.issues.every(issue => !issue.demo))
     })
     await t.test('duplicates use distance/category/seven days without text overlap', async () => {
       const { findDuplicateCandidate } = await import('../services/dupService.js')

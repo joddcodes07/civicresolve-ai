@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { BAND_HEX } from '../../lib/mapPins.js'
+import { issueColor } from '../../lib/mapPins.js'
+import { useI18n } from '../../lib/i18n.jsx'
 import { Pill, BandPill, PriorityScore } from '../ui/Pills.jsx'
 import { formatDateTime } from '../../lib/format.js'
 
@@ -18,6 +19,7 @@ function project(lat, lng) {
  * so it is fast, animated, and unmistakably ours.
  */
 export function LivingMap({ issues = [] }) {
+  const { t } = useI18n()
   const [active, setActive] = useState(null)
 
   const pins = useMemo(() => {
@@ -65,22 +67,22 @@ export function LivingMap({ issues = [] }) {
 
           {/* pins */}
           {pins.map((pin) => {
-            const color = BAND_HEX[pin.priorityBand] || BAND_HEX.normal
+            const color = issueColor(pin)
             const isActive = pin.id === active
             return (
               <button
                 key={pin.id}
                 onClick={() => setActive(isActive ? null : pin.id)}
                 className="absolute -translate-x-1/2 -translate-y-full"
-                style={{ left: `${pin.x}%`, top: `${pin.y}%`, zIndex: isActive ? 30 : 10, animation: `pin-drop 0.7s cubic-bezier(.16,1,.3,1) ${Math.min(pin.index * 70, 1400)}ms both` }}
-                aria-label={`${pin.category?.name} in ${pin.ward?.name}`}
+                style={{ left: `${pin.x}%`, top: `${pin.y}%`, zIndex: isActive ? 30 : pin.demo ? 10 : 15, animation: `pin-drop 0.7s cubic-bezier(.16,1,.3,1) ${Math.min(pin.index * 70, 1400)}ms both` }}
+                aria-label={`${pin.category?.name} in ${pin.ward?.name}${pin.demo ? ` · ${t('common.demo')}` : ''}`}
               >
                 <span className="relative block">
                   {pin.priorityBand === 'urgent' && (
                     <span className="animate-pulse-ring absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: color, opacity: 0.35 }} />
                   )}
                   <span
-                    className={`grid h-7 w-7 place-items-center rounded-full text-[10px] font-medium text-white shadow-md ring-2 ring-card transition-transform ${isActive ? 'scale-110' : ''}`}
+                    className={`grid h-7 w-7 place-items-center rounded-full text-[10px] font-medium text-white shadow-md transition-transform ${pin.demo ? 'border-2 border-dashed border-card' : 'ring-2 ring-card'} ${isActive ? 'scale-110' : ''}`}
                     style={{ background: color, transform: 'translateZ(20px)' }}
                   >
                     {pin.reportCount > 1 ? pin.reportCount : ''}
@@ -112,7 +114,7 @@ export function LivingMap({ issues = [] }) {
             <Pill tone={selected.status === 'RESOLVED' ? 'green' : 'blue'}>{selected.status}</Pill>
           </div>
           <div className="hair-t mt-3 flex items-center justify-between pt-3">
-            <span className="label">Reported {formatDateTime(selected.createdAt)}</span>
+            <span className="label">{selected.demo ? t('common.demo') : `Reported ${formatDateTime(selected.createdAt)}`}</span>
             <button onClick={() => setActive(null)} className="label text-ink-soft hover:text-ink">
               Close
             </button>
@@ -122,7 +124,7 @@ export function LivingMap({ issues = [] }) {
 
       {!selected && pins.length > 0 && (
         <div className="pointer-events-none absolute bottom-4 left-4 z-20">
-          <span className="pill border-line bg-paper/80 text-ink-soft backdrop-blur">Tap a pin to see the issue</span>
+          <span className="pill border-line bg-paper/80 text-ink-soft backdrop-blur">{pins.some((pin) => pin.demo) ? t('map.demoMarkers') : 'Tap a pin to see the issue'}</span>
         </div>
       )}
     </div>

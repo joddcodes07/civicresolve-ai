@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useI18n } from '../../lib/i18n.jsx'
 import { useFetch } from '../../hooks/useFetch.js'
 import { useCountUp } from '../../hooks/useMotion.js'
@@ -45,11 +45,16 @@ export default function Home() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const [code, setCode] = useState('')
-  const { data: statsData } = useFetch('/api/meta/stats')
-  const { data: issueData } = useFetch('/api/issues/map')
+  const [params] = useSearchParams()
+  const preview = params.get('demo') === '1'
+  const demoMode = preview ? 'preview' : 'mixed'
+  const { data: statsData, loading: statsLoading, error: statsError } = useFetch(`/api/meta/stats?demo=${demoMode}`)
+  const { data: issueData } = useFetch(`/api/issues/map?demo=${demoMode}`)
   const { data: deptData } = useFetch('/api/meta/departments')
 
   const stats = statsData?.stats || {}
+  const demo = statsData?.demoStats
+  const demoOnly = preview && demo
   const issues = issueData?.issues || []
   const departments = deptData?.departments || []
 
@@ -132,15 +137,29 @@ export default function Home() {
 
       {/* ---------------- LIVE COUNTERS ---------------- */}
       <section className="frame py-14">
-        <SectionLabel index={1} right={<Pill tone="green" dot>Live</Pill>}>
-          {t('home.liveTitle')}
+        <SectionLabel index={1} right={statsData && <Pill tone={demoOnly ? 'blue' : 'green'} dot>{demoOnly ? t('common.demo') : 'Live'}</Pill>}>
+          {demoOnly ? t('home.demoTitle') : t('home.liveTitle')}
         </SectionLabel>
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-          <Counter value={stats.total || 0} label={t('home.statComplaints')} />
-          <Counter value={stats.verifiedRate || 0} label={t('home.statVerified')} suffix="%" />
-          <Counter value={stats.verified || 0} label="Citizen-verified fixes" />
-          <Counter value={stats.departments || 14} label={t('home.statDepartments')} />
-        </div>
+        {statsError ? (
+          <p role="status" className="text-ink-soft">{t('home.statsUnavailable')}</p>
+        ) : statsLoading || !statsData ? (
+          <p role="status" className="text-ink-soft">{t('home.statsLoading')}</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+            <Counter value={demoOnly?.total ?? stats.thisMonth ?? stats.total} label={t(demoOnly ? 'home.demoComplaints' : 'home.statComplaints')} />
+            <Counter value={demoOnly?.verifiedRate ?? stats.verifiedRate} label={t('home.statVerified')} suffix="%" />
+            <Counter value={demoOnly?.verified ?? stats.verified} label="Citizen-verified fixes" />
+            <Counter value={stats.departments} label={t('home.statDepartments')} />
+          </div>
+        )}
+        {!statsLoading && !statsError && demo && (
+          <div className="mt-6 flex flex-wrap items-center gap-3 text-sm">
+            {!preview && <Pill tone="blue">{demo.total} {t('home.demoComplaints')}</Pill>}
+            <Link to={preview ? '/' : '/?demo=1'} preventScrollReset className="link-sweep text-blue">
+              {t(preview ? 'common.showMixed' : 'common.showDemo')}
+            </Link>
+          </div>
+        )}
       </section>
 
       {/* ---------------- HOW IT WORKS ---------------- */}

@@ -2,7 +2,8 @@
 import { Router } from 'express'
 import { prisma } from '../db.js'
 import { asyncHandler, HttpError } from '../middleware/error.js'
-import { serialiseIssue, serialiseComplaint } from '../lib/serialize.js'
+import { serialiseIssue } from '../lib/serialize.js'
+import { getDemoIssues } from '../data/demoIssues.js'
 
 const router = Router()
 
@@ -20,9 +21,9 @@ router.get(
     if (wardId) where.wardId = String(wardId)
     if (departmentId) where.category = { departmentId: String(departmentId) }
     if (priority) {
-      const bands = { urgent: { gte: 70 }, high: { gte: 40, lt: 70 }, normal: { lt: 40 } }
-      if (!bands[priority]) throw new HttpError(400, 'Invalid priority filter')
-      where.priority = bands[priority]
+      const bands = new Map([['urgent', { gte: 70 }], ['high', { gte: 40, lt: 70 }], ['normal', { lt: 40 }]])
+      if (!bands.has(priority)) throw new HttpError(400, 'Invalid priority filter')
+      where.priority = bands.get(priority)
     }
 
     if (bbox) {
@@ -34,15 +35,31 @@ router.get(
       }
     }
 
-    const issues = await prisma.issue.findMany({
+    const { demo: mode } = req.query
+    const preview = mode === 'preview'
+    const live = preview ? [] : await prisma.issue.findMany({
       where,
       include: { category: { include: { department: true } }, ward: true },
       orderBy: [{ reportCount: 'desc' }, { updatedAt: 'desc' }],
       take: 800,
     })
-    res.json({ issues: issues.map(serialiseIssue),
-      heatmap: issues.map(i => ({ lat: i.lat, lng: i.lng, weight: i.reportCount, priority: i.priority })),
-      truncated: issues.length === 800,
+    const demo = preview || mode === 'mixed' || (mode === '1' && live.length === 0 && await prisma.complaint.count() === 0)
+    let samples = []
+    if (demo) {
+      samples = (await getDemoIssues()).filter((issue) =>
+        (status ? issue.status === status : issue.status !== 'CONFIRMED') &&
+        (!categoryId || issue.category.id === categoryId) &&
+        (!departmentId || issue.category.departmentId === departmentId) &&
+        (!wardId || issue.ward.id === wardId) &&
+        (!where.priority || (issue.priority >= (where.priority.gte ?? 0) && issue.priority < (where.priority.lt ?? Infinity))) &&
+        (!where.lat || (issue.lat >= where.lat.gte && issue.lat <= where.lat.lte && issue.lng >= where.lng.gte && issue.lng <= where.lng.lte)),
+      ).sort((a, b) => b.reportCount - a.reportCount)
+    }
+    const issues = [...live.map(serialiseIssue), ...samples.map((issue) => ({ ...serialiseIssue(issue), demo: true }))]
+    res.json({
+      demo, issues,
+      heatmap: issues.map(i => ({ lat: i.lat, lng: i.lng, weight: i.reportCount, priority: i.priority, ...(i.demo && { demo: true }) })),
+      truncated: live.length === 800,
     })
   }),
 )

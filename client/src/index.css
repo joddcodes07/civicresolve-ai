@@ -371,6 +371,7 @@
   font-weight: 500;
   color: #fff;
 }
+.map-pin-demo { border-style: dashed; }
 .map-pin > span { transform: rotate(-45deg); }
 
 @media (prefers-reduced-motion: reduce) {
