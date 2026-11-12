@@ -35,16 +35,18 @@ router.get(
       }
     }
 
-    const preview = req.query.demo === 'preview'
-    let issues = preview ? [] : await prisma.issue.findMany({
+    const { demo: mode } = req.query
+    const preview = mode === 'preview'
+    const live = preview ? [] : await prisma.issue.findMany({
       where,
       include: { category: { include: { department: true } }, ward: true },
       orderBy: [{ reportCount: 'desc' }, { updatedAt: 'desc' }],
       take: 800,
     })
-    const demo = preview || (req.query.demo === '1' && issues.length === 0 && await prisma.complaint.count() === 0)
+    const demo = preview || mode === 'mixed' || (mode === '1' && live.length === 0 && await prisma.complaint.count() === 0)
+    let samples = []
     if (demo) {
-      issues = (await getDemoIssues()).filter((issue) =>
+      samples = (await getDemoIssues()).filter((issue) =>
         (status ? issue.status === status : issue.status !== 'CONFIRMED') &&
         (!categoryId || issue.category.id === categoryId) &&
         (!departmentId || issue.category.departmentId === departmentId) &&
@@ -53,9 +55,11 @@ router.get(
         (!where.lat || (issue.lat >= where.lat.gte && issue.lat <= where.lat.lte && issue.lng >= where.lng.gte && issue.lng <= where.lng.lte)),
       ).sort((a, b) => b.reportCount - a.reportCount)
     }
-    res.json({ demo, issues: issues.map(serialiseIssue),
-      heatmap: issues.map(i => ({ lat: i.lat, lng: i.lng, weight: i.reportCount, priority: i.priority })),
-      truncated: issues.length === 800,
+    const issues = [...live.map(serialiseIssue), ...samples.map((issue) => ({ ...serialiseIssue(issue), demo: true }))]
+    res.json({
+      demo, issues,
+      heatmap: issues.map(i => ({ lat: i.lat, lng: i.lng, weight: i.reportCount, priority: i.priority, ...(i.demo && { demo: true }) })),
+      truncated: live.length === 800,
     })
   }),
 )

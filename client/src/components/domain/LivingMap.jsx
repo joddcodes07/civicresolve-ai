@@ -18,7 +18,7 @@ function project(lat, lng) {
  * highlighted one opens a glass data card. A pure-CSS/SVG scene (no map tiles)
  * so it is fast, animated, and unmistakably ours.
  */
-export function LivingMap({ issues = [], demo = false }) {
+export function LivingMap({ issues = [] }) {
   const { t } = useI18n()
   const [active, setActive] = useState(null)
 
@@ -74,15 +74,15 @@ export function LivingMap({ issues = [], demo = false }) {
                 key={pin.id}
                 onClick={() => setActive(isActive ? null : pin.id)}
                 className="absolute -translate-x-1/2 -translate-y-full"
-                style={{ left: `${pin.x}%`, top: `${pin.y}%`, zIndex: isActive ? 30 : 10, animation: `pin-drop 0.7s cubic-bezier(.16,1,.3,1) ${Math.min(pin.index * 70, 1400)}ms both` }}
-                aria-label={`${pin.category?.name} in ${pin.ward?.name}`}
+                style={{ left: `${pin.x}%`, top: `${pin.y}%`, zIndex: isActive ? 30 : pin.demo ? 10 : 15, animation: `pin-drop 0.7s cubic-bezier(.16,1,.3,1) ${Math.min(pin.index * 70, 1400)}ms both` }}
+                aria-label={`${pin.category?.name} in ${pin.ward?.name}${pin.demo ? ` · ${t('common.demo')}` : ''}`}
               >
                 <span className="relative block">
                   {pin.priorityBand === 'urgent' && (
                     <span className="animate-pulse-ring absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: color, opacity: 0.35 }} />
                   )}
                   <span
-                    className={`grid h-7 w-7 place-items-center rounded-full text-[10px] font-medium text-white shadow-md ring-2 ring-card transition-transform ${isActive ? 'scale-110' : ''}`}
+                    className={`grid h-7 w-7 place-items-center rounded-full text-[10px] font-medium text-white shadow-md transition-transform ${pin.demo ? 'border-2 border-dashed border-card' : 'ring-2 ring-card'} ${isActive ? 'scale-110' : ''}`}
                     style={{ background: color, transform: 'translateZ(20px)' }}
                   >
                     {pin.reportCount > 1 ? pin.reportCount : ''}
@@ -114,7 +114,7 @@ export function LivingMap({ issues = [], demo = false }) {
             <Pill tone={selected.status === 'RESOLVED' ? 'green' : 'blue'}>{selected.status}</Pill>
           </div>
           <div className="hair-t mt-3 flex items-center justify-between pt-3">
-            <span className="label">{demo ? t('common.demo') : `Reported ${formatDateTime(selected.createdAt)}`}</span>
+            <span className="label">{selected.demo ? t('common.demo') : `Reported ${formatDateTime(selected.createdAt)}`}</span>
             <button onClick={() => setActive(null)} className="label text-ink-soft hover:text-ink">
               Close
             </button>
@@ -124,7 +124,7 @@ export function LivingMap({ issues = [], demo = false }) {
 
       {!selected && pins.length > 0 && (
         <div className="pointer-events-none absolute bottom-4 left-4 z-20">
-          <span className="pill border-line bg-paper/80 text-ink-soft backdrop-blur">{demo ? t('map.demoTap') : 'Tap a pin to see the issue'}</span>
+          <span className="pill border-line bg-paper/80 text-ink-soft backdrop-blur">{pins.some((pin) => pin.demo) ? t('map.demoMarkers') : 'Tap a pin to see the issue'}</span>
         </div>
       )}
     </div>

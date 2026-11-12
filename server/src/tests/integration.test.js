@@ -133,6 +133,13 @@ test('backend integration against isolated PostgreSQL', { skip: process.env.RUN_
       const { body } = await request('/api/meta/stats?demo=preview')
       assert.ok(body.stats.total > 0)
       assert.ok(body.demoStats.total > 0)
+      const mixed = await request('/api/issues/map?demo=mixed')
+      assert.ok(mixed.body.issues.some(issue => issue.demo && issue.code.startsWith('DEMO-')))
+      assert.ok(mixed.body.issues.some(issue => !issue.demo && issue.code.startsWith('ISS-')))
+      assert.ok(mixed.body.heatmap.some(point => point.demo))
+      const mixedStats = await request('/api/meta/stats?demo=mixed')
+      assert.deepEqual(mixedStats.body, body)
+      assert.ok((await request('/api/issues/map?demo=0')).body.issues.every(issue => !issue.demo))
     })
     await t.test('duplicates use distance/category/seven days without text overlap', async () => {
       const { findDuplicateCandidate } = await import('../services/dupService.js')

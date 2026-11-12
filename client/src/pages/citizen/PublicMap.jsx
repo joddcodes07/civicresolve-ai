@@ -22,26 +22,34 @@ export default function PublicMap() {
   const [heat, setHeat] = useState(false)
   const [params] = useSearchParams()
   const preview = params.get('demo') === '1'
-  const demoMode = preview ? 'preview' : '1'
+  const liveOnly = params.get('demo') === '0'
+  const demoMode = preview ? 'preview' : liveOnly ? '0' : 'mixed'
   const { data, loading, error, reload } = useFetch(`/api/issues/map?demo=${demoMode}`)
 
   const issues = data?.issues || []
   const filtered = useMemo(() => (filter === 'all' ? issues : issues.filter((i) => i.priorityBand === filter || (filter === 'normal' && i.priorityBand === 'low'))), [issues, filter])
-  const top = useMemo(() => [...filtered].sort((a, b) => b.reportCount - a.reportCount).slice(0, 12), [filtered])
+  const demoCount = filtered.filter((issue) => issue.demo).length
+  const liveCount = filtered.length - demoCount
+  const top = useMemo(() => [...filtered].sort((a, b) =>
+    Number(Boolean(a.demo)) - Number(Boolean(b.demo)) || b.reportCount - a.reportCount,
+  ).slice(0, 12), [filtered])
 
   return (
     <div className="frame py-10">
-      <SectionLabel index={7} right={data && !error && <Pill tone="blue">{filtered.length} {t(data.demo ? 'map.demoIssues' : 'map.issues')}</Pill>}>
+      <SectionLabel index={7} right={data && !loading && !error && (
+        <div className="flex flex-wrap gap-2">
+          {!preview && <Pill tone="green">{liveCount} {t('map.liveIssues')}</Pill>}
+          {data.demo && <Pill tone="blue">{demoCount} {t('map.demoIssues')}</Pill>}
+        </div>
+      )}>
         {t('map.title')}
       </SectionLabel>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="max-w-xl font-display text-4xl tracking-tight">{t('map.sub')}</h1>
         <div className="flex flex-wrap items-center gap-3">
-          {(preview || (data && !data.demo)) && (
-            <Link to={preview ? '/map' : '/map?demo=1'} preventScrollReset className="pill border border-line text-blue">
-              {t(preview ? 'common.showLive' : 'common.showDemo')}
-            </Link>
-          )}
+          <Link to={preview || liveOnly ? '/map' : '/map?demo=0'} preventScrollReset className="pill border border-line text-blue">
+            {t(preview || liveOnly ? 'common.showMixed' : 'common.showLive')}
+          </Link>
           <Tabs tabs={FILTERS} value={filter} onChange={setFilter} />
           <button
             aria-pressed={heat}
@@ -53,7 +61,7 @@ export default function PublicMap() {
         </div>
       </div>
 
-      {data?.demo && <p className="mt-4 text-sm text-ink-soft">{t('map.demoNote')}</p>}
+      {data?.demo && !loading && <p className="mt-4 text-sm text-ink-soft">{t('map.demoMarkers')}</p>}
       {error && (
         <div role="status" className="card mt-6 flex flex-wrap items-center gap-3 p-4">
           <span>{t('map.unavailable')}</span>
@@ -63,7 +71,7 @@ export default function PublicMap() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-12">
         <div className="lg:col-span-8">
-          {loading ? <Skeleton className="h-[520px] w-full" /> : <IssueMap issues={filtered} height={520} heat={heat} demo={data?.demo} />}
+          {loading ? <Skeleton className="h-[520px] w-full" /> : <IssueMap issues={filtered} height={520} heat={heat} />}
           <div className="mt-4 flex flex-wrap items-center gap-4">
             <span className="label">{t('map.legend')}</span>
             {[
@@ -99,7 +107,7 @@ export default function PublicMap() {
                   </div>
                   <div className="mt-2 flex items-center gap-2">
                     <BandPill band={issue.priorityBand} score={issue.priority} />
-                    <span className="label">{data?.demo ? t('common.demo') : timeAgo(issue.createdAt)}</span>
+                    <span className="label">{issue.demo ? t('common.demo') : timeAgo(issue.createdAt)}</span>
                   </div>
                 </div>
               ))}

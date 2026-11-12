@@ -47,13 +47,14 @@ export default function Home() {
   const [code, setCode] = useState('')
   const [params] = useSearchParams()
   const preview = params.get('demo') === '1'
-  const demoMode = preview ? 'preview' : '1'
+  const demoMode = preview ? 'preview' : 'mixed'
   const { data: statsData, loading: statsLoading, error: statsError } = useFetch(`/api/meta/stats?demo=${demoMode}`)
   const { data: issueData } = useFetch(`/api/issues/map?demo=${demoMode}`)
   const { data: deptData } = useFetch('/api/meta/departments')
 
   const stats = statsData?.stats || {}
   const demo = statsData?.demoStats
+  const demoOnly = preview && demo
   const issues = issueData?.issues || []
   const departments = deptData?.departments || []
 
@@ -116,7 +117,7 @@ export default function Home() {
 
             <div className="lg:col-span-7">
               <Reveal delay={200}>
-                <LivingMap issues={issues} demo={issueData?.demo} />
+                <LivingMap issues={issues} />
               </Reveal>
             </div>
           </div>
@@ -136,8 +137,8 @@ export default function Home() {
 
       {/* ---------------- LIVE COUNTERS ---------------- */}
       <section className="frame py-14">
-        <SectionLabel index={1} right={statsData && <Pill tone={demo ? 'blue' : 'green'} dot>{demo ? t('common.demo') : 'Live'}</Pill>}>
-          {demo ? t('home.demoTitle') : t('home.liveTitle')}
+        <SectionLabel index={1} right={statsData && <Pill tone={demoOnly ? 'blue' : 'green'} dot>{demoOnly ? t('common.demo') : 'Live'}</Pill>}>
+          {demoOnly ? t('home.demoTitle') : t('home.liveTitle')}
         </SectionLabel>
         {statsError ? (
           <p role="status" className="text-ink-soft">{t('home.statsUnavailable')}</p>
@@ -145,16 +146,19 @@ export default function Home() {
           <p role="status" className="text-ink-soft">{t('home.statsLoading')}</p>
         ) : (
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-            <Counter value={demo?.total ?? stats.thisMonth ?? stats.total} label={t(demo ? 'home.demoComplaints' : 'home.statComplaints')} />
-            <Counter value={demo?.verifiedRate ?? stats.verifiedRate} label={t('home.statVerified')} suffix="%" />
-            <Counter value={demo?.verified ?? stats.verified} label="Citizen-verified fixes" />
+            <Counter value={demoOnly?.total ?? stats.thisMonth ?? stats.total} label={t(demoOnly ? 'home.demoComplaints' : 'home.statComplaints')} />
+            <Counter value={demoOnly?.verifiedRate ?? stats.verifiedRate} label={t('home.statVerified')} suffix="%" />
+            <Counter value={demoOnly?.verified ?? stats.verified} label="Citizen-verified fixes" />
             <Counter value={stats.departments} label={t('home.statDepartments')} />
           </div>
         )}
-        {statsData?.stats?.total > 0 && (
-          <Link to={preview ? '/' : '/?demo=1'} preventScrollReset className="link-sweep mt-6 inline-block text-sm text-blue">
-            {t(preview ? 'common.showLive' : 'common.showDemo')}
-          </Link>
+        {!statsLoading && !statsError && demo && (
+          <div className="mt-6 flex flex-wrap items-center gap-3 text-sm">
+            {!preview && <Pill tone="blue">{demo.total} {t('home.demoComplaints')}</Pill>}
+            <Link to={preview ? '/' : '/?demo=1'} preventScrollReset className="link-sweep text-blue">
+              {t(preview ? 'common.showMixed' : 'common.showDemo')}
+            </Link>
+          </div>
         )}
       </section>
 

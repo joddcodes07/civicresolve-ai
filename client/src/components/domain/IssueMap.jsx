@@ -4,7 +4,7 @@ import { pinIcon, issueColor } from '../../lib/mapPins.js'
 import { useI18n } from '../../lib/i18n.jsx'
 
 /** Public issue map: one pin per grouped Issue, the badge is the merged report count. */
-export function IssueMap({ issues = [], center = [18.5204, 73.8567], zoom = 12, height = 460, heat = false, demo = false, onSelect }) {
+export function IssueMap({ issues = [], center = [18.5204, 73.8567], zoom = 12, height = 460, heat = false, onSelect }) {
   const { t } = useI18n()
   return (
     <div className="overflow-hidden rounded-xl border border-line" style={{ height }}>
@@ -22,7 +22,8 @@ export function IssueMap({ issues = [], center = [18.5204, 73.8567], zoom = 12, 
                 pathOptions={{
                   color: issueColor(issue),
                   fillColor: issueColor(issue),
-                  fillOpacity: 0.16,
+                  fillOpacity: issue.demo ? 0.09 : 0.16,
+                  dashArray: issue.demo ? '4 4' : undefined,
                   weight: 1,
                 }}
               />
@@ -31,12 +32,13 @@ export function IssueMap({ issues = [], center = [18.5204, 73.8567], zoom = 12, 
               <Marker
                 key={issue.id}
                 position={[issue.lat, issue.lng]}
-                icon={pinIcon({ color: issueColor(issue), text: String(issue.reportCount || 1) })}
+                zIndexOffset={issue.demo ? 0 : 1000}
+                icon={pinIcon({ color: issueColor(issue), demo: issue.demo, text: String(issue.reportCount || 1) })}
                 eventHandlers={{ click: () => onSelect?.(issue) }}
               >
                 <Popup>
                   <div className="min-w-[190px]">
-                    <div className="mono text-[11px] tracking-wider text-ink-faint">{issue.code}{demo && ` · ${t('common.demo')}`}</div>
+                    <div className="mono text-[11px] tracking-wider text-ink-faint">{issue.code}{issue.demo && ` · ${t('common.demo')}`}</div>
                     <div className="mt-1 font-medium">{issue.category?.name || 'Issue'}</div>
                     <div className="mt-1 text-[12px] text-ink-soft">
                       {issue.department?.name} · {issue.ward?.name}
