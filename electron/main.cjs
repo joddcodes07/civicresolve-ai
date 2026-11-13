@@ -1,7 +1,17 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
 const isDev = !app.isPackaged;
+
+// IPC: Renderer requests basic desktop information
+ipcMain.handle('desktop:get-app-info', () => {
+    return {
+        name: app.getName(),
+        version: app.getVersion(),
+        platform: process.platform,
+        isPackaged: app.isPackaged
+    };
+});
 
 function createWindow() {
     const mainWindow = new BrowserWindow({
