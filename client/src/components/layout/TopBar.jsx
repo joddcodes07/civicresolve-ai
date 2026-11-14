@@ -35,15 +35,17 @@ export function TopBar() {
         <div className="frame flex h-16 items-center justify-between gap-4">
           <Logo />
 
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav className="hidden items-center gap-1.5 lg:flex">
             {CITIZEN_LINKS.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
                 end={link.end}
                 className={({ isActive }) =>
-                  `label rounded-full px-3 py-2 transition-colors ${
-                    isActive ? 'text-ink' : 'text-ink-soft hover:text-ink'
+                  `rounded-full border px-3.5 py-2 text-[13.5px] font-semibold tracking-[-0.01em] transition-colors ${
+                    isActive
+                      ? 'border-ink bg-ink text-paper'
+                      : 'border-line bg-card text-ink hover:border-line-strong hover:bg-paper-2'
                   }`
                 }
               >
@@ -51,7 +53,10 @@ export function TopBar() {
               </NavLink>
             ))}
             {consoleLink && (
-              <NavLink to={consoleLink} className="label ml-1 rounded-full border border-line px-3 py-2 text-ink">
+              <NavLink
+                to={consoleLink}
+                className="ml-1 rounded-full border border-line bg-card px-3.5 py-2 text-[13.5px] font-semibold tracking-[-0.01em] text-ink hover:border-line-strong hover:bg-paper-2"
+              >
                 {user?.role === 'ADMIN' ? t('nav.admin') : t('nav.officer')}
               </NavLink>
             )}
