@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { pinIcon, issueColor } from '../../lib/mapPins.js'
 import { useI18n } from '../../lib/i18n.jsx'
@@ -8,7 +8,7 @@ export function IssueMap({ issues = [], center = [18.5204, 73.8567], zoom = 12, 
   const { t } = useI18n()
   return (
     <div className="overflow-hidden rounded-xl border border-line" style={{ height }}>
-      <MapContainer center={center} zoom={zoom} scrollWheelZoom style={{ height: '100%', width: '100%' }}>
+      <MapContainer center={center} zoom={zoom} scrollWheelZoom preferCanvas style={{ height: '100%', width: '100%' }}>
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -29,13 +29,7 @@ export function IssueMap({ issues = [], center = [18.5204, 73.8567], zoom = 12, 
               />
             ))
           : issues.map((issue) => (
-              <Marker
-                key={issue.id}
-                position={[issue.lat, issue.lng]}
-                zIndexOffset={issue.demo ? 0 : 1000}
-                icon={pinIcon({ color: issueColor(issue), demo: issue.demo, text: String(issue.reportCount || 1) })}
-                eventHandlers={{ click: () => onSelect?.(issue) }}
-              >
+              <IssueMarker key={issue.id} issue={issue} onSelect={onSelect}>
                 <Popup>
                   <div className="min-w-[190px]">
                     <div className="mono text-[11px] tracking-wider text-ink-faint">{issue.code}{issue.demo && ` · ${t('common.demo')}`}</div>
@@ -51,10 +45,28 @@ export function IssueMap({ issues = [], center = [18.5204, 73.8567], zoom = 12, 
                     </div>
                   </div>
                 </Popup>
-              </Marker>
+              </IssueMarker>
             ))}
       </MapContainer>
     </div>
+  )
+}
+
+function IssueMarker({ issue, children, onSelect }) {
+  const color = issueColor(issue)
+  const position = [issue.lat, issue.lng]
+  const eventHandlers = { click: () => onSelect?.(issue) }
+  if (issue.demo) {
+    return (
+      <CircleMarker center={position} radius={5} pathOptions={{ color: '#fff', fillColor: color, weight: 1, fillOpacity: 0.85 }} eventHandlers={eventHandlers}>
+        {children}
+      </CircleMarker>
+    )
+  }
+  return (
+    <Marker position={position} icon={pinIcon({ color, text: String(issue.reportCount || 1) })} eventHandlers={eventHandlers}>
+      {children}
+    </Marker>
   )
 }
 

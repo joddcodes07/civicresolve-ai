@@ -298,6 +298,7 @@
   "home.statsLoading": "Loading city statistics…",
   "home.statsUnavailable": "City statistics are temporarily unavailable.",
   "map.demoIssues": "demo issues",
+  "map.demoHeading": "Explore fictional issues across Pune",
   "map.demoNote": "These are fictional reports placed in Pune wards for demonstration.",
   "map.demoTap": "Demo data · Tap a pin",
   "map.unavailable": "The issue service is temporarily unavailable.",

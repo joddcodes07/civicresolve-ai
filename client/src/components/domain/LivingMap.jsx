@@ -124,7 +124,7 @@ export function LivingMap({ issues = [] }) {
 
       {!selected && pins.length > 0 && (
         <div className="pointer-events-none absolute bottom-4 left-4 z-20">
-          <span className="pill border-line bg-paper/80 text-ink-soft backdrop-blur">{pins.some((pin) => pin.demo) ? t('map.demoMarkers') : 'Tap a pin to see the issue'}</span>
+          <span className="pill border-line bg-paper/80 text-ink-soft backdrop-blur">{pins.some((pin) => pin.demo) ? t('map.demoTap') : 'Tap a pin to see the issue'}</span>
         </div>
       )}
     </div>
