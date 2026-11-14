@@ -2,7 +2,7 @@
 import { Router } from 'express'
 import { prisma } from '../db.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
-import { asyncHandler } from '../middleware/error.js'
+import { asyncHandler, HttpError } from '../middleware/error.js'
 import { serialiseComplaint } from '../lib/serialize.js'
 import { OPEN_STATUSES, CLOSED_STATUSES } from '../lib/constants.js'
 
@@ -20,6 +20,17 @@ const INCLUDE = {
 }
 
 const PAGE_SIZE = 20
+const QUEUE_FILTERS = new Set([
+  'open', 'urgent', 'high', 'safety', 'breached', 'needs_review', 'reopened', 'in_progress', 'resolved',
+])
+
+export function parseQueueQuery(query = {}) {
+  const filter = query.filter ?? 'open'
+  if (!QUEUE_FILTERS.has(filter)) throw new HttpError(400, 'Invalid queue filter')
+  const page = Number(query.page ?? '1')
+  if (!Number.isInteger(page) || page < 1) throw new HttpError(400, 'Invalid page')
+  return { filter, page }
+}
 
 function scopeFor(user, all) {
   if (user.role === 'ADMIN' || all === '1' || all === 'true') return {}
@@ -29,7 +40,8 @@ function scopeFor(user, all) {
 router.get(
   '/queue',
   asyncHandler(async (req, res) => {
-    const { filter = 'open', q, wardId, categoryId, page = '1', all } = req.query
+    const { filter, page } = parseQueueQuery(req.query)
+    const { q, wardId, categoryId, all } = req.query
     const now = new Date()
     const scope = scopeFor(req.user, all)
 
@@ -57,7 +69,7 @@ router.get(
       ]
     }
 
-    const pageNum = Math.max(1, Number(page) || 1)
+    const pageNum = page
     const [rows, total] = await Promise.all([
       prisma.complaint.findMany({
         where,
