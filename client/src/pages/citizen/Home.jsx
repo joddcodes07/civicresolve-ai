@@ -65,8 +65,8 @@ export default function Home() {
       {/* ---------------- HERO ---------------- */}
       <section className="relative overflow-hidden">
         <div className="frame pt-14 pb-10 md:pt-20">
-          <div className="grid items-end gap-10 lg:grid-cols-12">
-            <div className="lg:col-span-5">
+          <div className="grid items-center gap-8 lg:grid-cols-12 lg:gap-6">
+            <div className="lg:col-span-5 xl:col-span-4">
               <Reveal>
                 <span className="label">{t('home.kicker')}</span>
               </Reveal>
@@ -111,8 +111,8 @@ export default function Home() {
               </Reveal>
             </div>
 
-            <div className="lg:col-span-7">
-              <Reveal delay={200}>
+            <div className="min-w-0 lg:col-span-7 xl:col-span-8">
+              <Reveal delay={200} className="xl:-mr-8 2xl:-mr-14">
                 <LivingMap issues={issues} />
               </Reveal>
             </div>

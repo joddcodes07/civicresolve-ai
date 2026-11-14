@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useI18n } from '../../lib/i18n.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { api } from '../../lib/api.js'
-import { Button } from '../../components/ui/Button.jsx'
 import { Field, Input } from '../../components/ui/Field.jsx'
 import { LogoMark } from '../../components/layout/Logo.jsx'
 import { Spinner } from '../../components/ui/Primitives.jsx'
@@ -21,6 +20,8 @@ export default function Login() {
 
   const [mode, setMode] = useState('login')
   const [form, setForm] = useState({ name: '', identifier: '', email: '', phone: '', password: '' })
+  const [showPassword, setShowPassword] = useState(false)
+  const [formError, setFormError] = useState('')
   const [busy, setBusy] = useState(false)
   const [demo, setDemo] = useState([])
   const [stats, setStats] = useState(null)
@@ -28,6 +29,7 @@ export default function Login() {
   const [googleError, setGoogleError] = useState('')
   const googleHandled = useRef(false)
   const from = location.state?.from || null
+  const isLogin = mode === 'login'
 
   useEffect(() => {
     api.get('/api/auth/google/status').then(({ enabled }) => setGoogleEnabled(enabled)).catch(() => {})
@@ -63,27 +65,35 @@ export default function Login() {
   }, [location.search, loginWithToken, navigate])
 
   function update(key, value) {
+    setFormError('')
     setForm((f) => ({ ...f, [key]: value }))
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
+    setFormError('')
+    const email = form.email.trim()
+    const phone = form.phone.trim()
+    if (!isLogin && !email && !phone) {
+      setFormError(t('login.contactRequired'))
+      return
+    }
     setBusy(true)
     try {
-      if (mode === 'login') {
+      if (isLogin) {
         const u = await login({ identifier: form.identifier, password: form.password })
         toast(`Welcome back, ${u.name.split(' ')[0]}`, { tone: 'green' })
         navigate(from || (u.role === 'ADMIN' ? '/admin' : u.role === 'OFFICER' ? '/officer' : '/'), { replace: true })
       } else {
         const payload = { name: form.name, password: form.password }
-        if (form.email) payload.email = form.email
-        if (form.phone) payload.phone = form.phone
+        if (email) payload.email = email
+        if (phone) payload.phone = phone
         const u = await register(payload)
         toast(`Account created — welcome, ${u.name.split(' ')[0]}`, { tone: 'green' })
         navigate(from || '/', { replace: true })
       }
     } catch (err) {
-      toast(err.message || t('login.failed'), { tone: 'red' })
+      setFormError(err.message || t('login.failed'))
     } finally {
       setBusy(false)
     }
@@ -103,90 +113,131 @@ export default function Login() {
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-2">
-      {/* left: form */}
-      <div className="flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-20">
-        <Link to="/" className="mb-10 flex items-center gap-2.5">
-          <LogoMark />
-          <span className="font-display text-lg font-semibold tracking-tight">CivicResolve</span>
-        </Link>
+      <main className="flex flex-col items-center justify-center px-4 py-8 sm:px-10 sm:py-12">
+        <div className="w-full max-w-md">
+          <Link to="/" className="mb-6 flex w-fit items-center gap-2.5">
+            <LogoMark />
+            <span className="font-display text-lg font-semibold tracking-tight">CivicResolve</span>
+          </Link>
 
-        <h1 className="font-display text-4xl tracking-tight">{mode === 'login' ? t('login.title') : t('login.registerTitle')}</h1>
-        <p className="mt-3 max-w-sm text-[14px] text-ink-soft">{t('login.sub')}</p>
+          <section aria-labelledby="login-title" className="rounded-[1.25rem] border border-line bg-card p-5 shadow-sm sm:p-8">
+            <h1 id="login-title" className="font-display text-4xl tracking-tight">
+              {t(isLogin ? 'login.title' : 'login.registerTitle')}
+            </h1>
+            <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+              {t(isLogin ? 'login.sub' : 'login.contactRequired')}
+            </p>
 
-        <form onSubmit={handleSubmit} className="mt-8 max-w-sm space-y-5">
-          {mode === 'register' && (
-            <Field label={t('login.name')} required>
-              <Input value={form.name} onChange={(e) => update('name', e.target.value)} autoComplete="name" required />
-            </Field>
-          )}
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              {isLogin ? (
+                <Field label={t('login.identifier')} required>
+                  <Input value={form.identifier} onChange={(e) => update('identifier', e.target.value)} placeholder="you@example.com" autoComplete="username" required />
+                </Field>
+              ) : (
+                <>
+                  <Field label={t('login.name')} required>
+                    <Input value={form.name} onChange={(e) => update('name', e.target.value)} autoComplete="name" minLength={2} maxLength={80} required />
+                  </Field>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label={t('login.email')}>
+                      <Input type="email" value={form.email} onChange={(e) => update('email', e.target.value)} autoComplete="email" />
+                    </Field>
+                    <Field label={t('login.phone')}>
+                      <Input type="tel" value={form.phone} onChange={(e) => update('phone', e.target.value)} autoComplete="tel" inputMode="numeric" pattern="[0-9]{10,15}" />
+                    </Field>
+                  </div>
+                </>
+              )}
 
-          {mode === 'login' ? (
-            <Field label={t('login.identifier')} required>
-              <Input value={form.identifier} onChange={(e) => update('identifier', e.target.value)} placeholder="you@example.com" autoComplete="username" required />
-            </Field>
-          ) : (
-            <>
-              <Field label={t('login.email')} hint={t('common.optional')}>
-                <Input type="email" value={form.email} onChange={(e) => update('email', e.target.value)} autoComplete="email" />
-              </Field>
-              <Field label={t('login.phone')} hint={t('common.optional')}>
-                <Input value={form.phone} onChange={(e) => update('phone', e.target.value)} inputMode="numeric" />
-              </Field>
-            </>
-          )}
-
-          <Field label={t('login.password')} required>
-            <Input type="password" value={form.password} onChange={(e) => update('password', e.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />
-          </Field>
-
-          <Button type="submit" variant="solid" block disabled={busy}>
-            {busy ? <Spinner /> : mode === 'login' ? t('login.submit') : t('login.register')}
-          </Button>
-        </form>
-
-        {googleEnabled && (
-          <div className="mt-4 max-w-sm">
-            <Button type="button" block disabled={busy} onClick={() => window.location.assign('/api/auth/google/start')}>
-              Continue with Google
-            </Button>
-          </div>
-        )}
-        {googleError && <p role="alert" className="mt-3 max-w-sm text-sm text-ink-soft">{googleError}</p>}
-
-        <button
-          onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-          className="label mt-6 w-fit text-ink-soft hover:text-ink"
-        >
-          {mode === 'login' ? t('login.register') : t('login.haveAccount')}
-        </button>
-
-        {demo.length > 0 && (
-          <div className="mt-10 max-w-sm">
-            <div className="hair-t pt-5">
-              <div className="flex items-center justify-between">
-                <span className="label label-ink">{t('login.demo')}</span>
-                <span className="label">{t('login.demoHint')}</span>
+              <div className="relative">
+                <Field label={t('login.password')} htmlFor="login-password" required>
+                  <Input id="login-password" className="pr-20" type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => update('password', e.target.value)} autoComplete={isLogin ? 'current-password' : 'new-password'} minLength={isLogin ? undefined : 8} maxLength={isLogin ? undefined : 100} required />
+                </Field>
+                <button
+                  type="button"
+                  aria-controls="login-password"
+                  aria-label={t(showPassword ? 'login.hidePassword' : 'login.showPassword')}
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  className="absolute bottom-0 right-1 flex h-11 items-center rounded-lg px-3 text-xs font-medium text-ink-soft hover:text-ink"
+                >
+                  {t(showPassword ? 'login.hide' : 'login.show')}
+                </button>
               </div>
-              <div className="mt-3 space-y-2">
-                {demo.map((account) => (
-                  <button
-                    key={account.identifier}
-                    onClick={() => quickLogin(account)}
-                    disabled={busy}
-                    className="flex w-full items-center justify-between gap-3 rounded-xl border border-line bg-card px-4 py-3 text-left transition-colors hover:border-line-strong"
-                  >
-                    <div>
-                      <div className="text-[13px] font-medium">{account.name}</div>
-                      <div className="mono text-[11px] text-ink-faint">{account.identifier}</div>
-                    </div>
-                    <Pill tone={ROLE_TONE[account.role]}>{account.role}</Pill>
-                  </button>
-                ))}
+              {formError && <p role="alert" className="text-sm text-red">{formError}</p>}
+
+              <button type="submit" disabled={busy} className="flex min-h-12 w-full items-center justify-center rounded-full bg-ink px-5 text-sm font-semibold text-white transition-colors hover:bg-ink-soft disabled:opacity-50">
+                {busy ? <Spinner /> : t(isLogin ? 'login.submit' : 'login.register')}
+              </button>
+            </form>
+
+            {googleEnabled && (
+              <>
+                <div className="my-4 flex items-center gap-3 text-xs text-ink-soft">
+                  <span className="h-px flex-1 bg-line" />
+                  <span>{t('login.or')}</span>
+                  <span className="h-px flex-1 bg-line" />
+                </div>
+                <button
+                  type="button"
+                  aria-label={t('login.google')}
+                  title={t('login.google')}
+                  disabled={busy}
+                  onClick={() => window.location.assign('/api/auth/google/start')}
+                  className="mx-auto grid size-12 place-items-center rounded-full border border-line-strong bg-white transition-colors hover:border-ink hover:bg-paper disabled:opacity-50"
+                >
+                  <img src="/google-g.png" alt="" width="20" height="20" />
+                </button>
+              </>
+            )}
+            {googleError && <p role="alert" className="mt-3 text-sm text-red">{googleError}</p>}
+          </section>
+
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-sm">
+            <span className="text-ink-soft">{t(isLogin ? 'login.newHere' : 'login.haveAccount')}</span>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setMode(isLogin ? 'register' : 'login')
+                setShowPassword(false)
+                setFormError('')
+                setGoogleError('')
+                setForm((current) => ({ ...current, password: '' }))
+              }}
+              className="rounded-sm font-semibold text-blue hover:underline disabled:opacity-50"
+            >
+              {t(isLogin ? 'login.register' : 'login.submit')}
+            </button>
+          </div>
+
+          {demo.length > 0 && (
+            <div className="mt-10 max-w-sm">
+              <div className="hair-t pt-5">
+                <div className="flex items-center justify-between">
+                  <span className="label label-ink">{t('login.demo')}</span>
+                  <span className="label">{t('login.demoHint')}</span>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {demo.map((account) => (
+                    <button
+                      key={account.identifier}
+                      onClick={() => quickLogin(account)}
+                      disabled={busy}
+                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-line bg-card px-4 py-3 text-left transition-colors hover:border-line-strong"
+                    >
+                      <div>
+                        <div className="text-[13px] font-medium">{account.name}</div>
+                        <div className="mono text-[11px] text-ink-faint">{account.identifier}</div>
+                      </div>
+                      <Pill tone={ROLE_TONE[account.role]}>{account.role}</Pill>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </main>
 
       {/* right: editorial panel */}
       <div className="relative hidden overflow-hidden border-l border-line bg-ink text-paper lg:flex lg:flex-col lg:justify-between lg:p-12">

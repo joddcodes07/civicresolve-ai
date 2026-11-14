@@ -3,7 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { CitizenLayout } from './components/layout/CitizenLayout.jsx'
 import { ConsoleShell } from './components/layout/ConsoleShell.jsx'
 import { useAuth } from './lib/auth.jsx'
-import { Spinner } from './components/ui/Primitives.jsx'
+import { PageLoader } from './components/layout/PageLoader.jsx'
 
 // Citizen-facing core loads eagerly (it is the first impression).
 import Home from './pages/citizen/Home.jsx'
@@ -34,26 +34,10 @@ const AdminAi = lazy(() => import('./pages/admin/AdminAi.jsx'))
 const AdminHeatmap = lazy(() => import('./pages/admin/AdminHeatmap.jsx'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings.jsx'))
 
-function PageLoader() {
-  return (
-    <div className="grid min-h-[60vh] place-items-center">
-      <Spinner className="text-ink-faint" />
-    </div>
-  )
-}
-
-function FullScreenLoader() {
-  return (
-    <div className="grid min-h-dvh place-items-center">
-      <Spinner className="text-ink-faint" />
-    </div>
-  )
-}
-
 function RequireRole({ roles }) {
   const { user, ready } = useAuth()
   const location = useLocation()
-  if (!ready) return <FullScreenLoader />
+  if (!ready) return <PageLoader fullScreen />
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />
   if (!roles.includes(user.role)) return <Navigate to="/" replace />
   return <Outlet />
@@ -62,14 +46,14 @@ function RequireRole({ roles }) {
 function RequireAuth() {
   const { user, ready } = useAuth()
   const location = useLocation()
-  if (!ready) return <FullScreenLoader />
+  if (!ready) return <PageLoader fullScreen />
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />
   return <Outlet />
 }
 
 export function App() {
   return (
-    <Suspense fallback={<PageLoader />}>
+    <Suspense fallback={<PageLoader fullScreen />}>
       <Routes>
       <Route element={<CitizenLayout />}>
         <Route index element={<Home />} />

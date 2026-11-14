@@ -390,3 +390,85 @@
 .lite .marquee-track { animation: none; }
 .lite .grain::before { display: none; }
 .lite .glass { backdrop-filter: none; background: var(--color-card); }
+
+.home-map-stage {
+  --map-tilt: 48deg;
+  --map-rotation: -22deg;
+  --map-scale: 1.10;
+  --map-rise: clamp(10px, 2vw, 28px);
+  perspective: 1450px;
+  perspective-origin: 56% 38%;
+  background: radial-gradient(ellipse at 56% 52%, rgb(197 218 249 / 72%), transparent 74%);
+}
+
+.home-map-plane {
+  transform: translateY(calc(-1 * var(--map-rise)))
+    rotateX(var(--map-tilt)) rotateZ(var(--map-rotation)) scale(var(--map-scale));
+  transform-style: preserve-3d;
+}
+
+.home-map-surface {
+  border-radius: 1rem;
+  mask-image:
+    linear-gradient(to right, transparent, #000 12% 88%, transparent),
+    linear-gradient(to bottom, transparent, #000 10% 84%, transparent);
+  mask-composite: intersect;
+}
+
+.home-map-pin { transform-style: preserve-3d; }
+
+.home-map-pin-anchor {
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid var(--pin-color);
+  border-radius: 50%;
+  opacity: .28;
+}
+
+@media (min-width: 80rem) {
+  .home-map-stage {
+    --map-tilt: 57deg;
+    --map-rotation: -27deg;
+    --map-scale: 1.17;
+  }
+}
+
+.home-map-pin-head {
+  position: absolute;
+  bottom: calc(50% - 3px);
+  transform: rotateZ(calc(-1 * var(--map-rotation))) rotateX(calc(-1 * var(--map-tilt)));
+  transform-origin: bottom;
+}
+
+.home-map-pin-symbol {
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: var(--pin-color);
+  filter: drop-shadow(0 2px 3px rgb(30 48 81 / 25%));
+}
+
+.home-map-pin-symbol > svg:first-child > path { fill: var(--color-white); }
+.home-map-pin-symbol > svg:first-child > circle { fill: currentColor; stroke: none; }
+.home-map-pin-symbol > .home-map-pin-resolved > circle { display: none; }
+.home-map-pin-check { position: absolute; top: 8px; left: 10px; }
+
+.home-map-pin:hover .home-map-pin-symbol,
+.home-map-pin:focus-visible .home-map-pin-symbol,
+.home-map-pin[aria-pressed="true"] .home-map-pin-symbol {
+  filter: drop-shadow(0 0 4px var(--pin-color));
+}
+
+@keyframes page-enter {
+  from { opacity: 0.65; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes page-loader-mark {
+  50% { transform: translateY(-3px); box-shadow: 0 8px 24px rgb(47 91 234 / 16%); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .page-enter { animation: page-enter 200ms ease-out; }
+  .page-loader-mark { animation: page-loader-mark 1.6s ease-in-out infinite; }
+}

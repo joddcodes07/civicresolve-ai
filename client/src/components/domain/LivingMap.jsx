@@ -1,93 +1,94 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { issueColor } from '../../lib/mapPins.js'
 import { useI18n } from '../../lib/i18n.jsx'
+import { IconCheck, IconMap } from '../ui/Icons.jsx'
 import { Pill, BandPill, PriorityScore } from '../ui/Pills.jsx'
 import { formatDateTime } from '../../lib/format.js'
 
-// Projection window roughly covering the demo wards around Pune.
-const BOUNDS = { minLat: 18.43, maxLat: 18.66, minLng: 73.72, maxLng: 74.02 }
-
-function project(lat, lng) {
-  const x = ((lng - BOUNDS.minLng) / (BOUNDS.maxLng - BOUNDS.minLng)) * 100
-  const y = (1 - (lat - BOUNDS.minLat) / (BOUNDS.maxLat - BOUNDS.minLat)) * 100
-  return { x: Math.max(2, Math.min(98, x)), y: Math.max(4, Math.min(96, y)) }
+// Fit the sample to the schematic and space out the preview markers.
+function previewPins(issues) {
+  const points = [...new Map(issues.filter(({ lat, lng }) =>
+    Number.isFinite(lat) && Number.isFinite(lng),
+  ).map((issue) => [issue.id, issue])).values()]
+  if (!points.length) return []
+  const latitudes = points.map(({ lat }) => lat)
+  const longitudes = points.map(({ lng }) => lng)
+  const south = Math.min(...latitudes)
+  const west = Math.min(...longitudes)
+  const height = Math.max(...latitudes) - south || 1
+  const width = Math.max(...longitudes) - west || 1
+  const candidates = points.map((issue) => ({
+    ...issue,
+    x: 15 + 69 * ((issue.lng - west) / width),
+    y: 16 + 55 * (1 - (issue.lat - south) / height),
+  }))
+  const pins = []
+  for (const pin of candidates) {
+    if (pins.every((other) => Math.hypot((pin.x - other.x) / 14, (pin.y - other.y) / 19) >= 1)) {
+      pins.push(pin)
+      if (pins.length === 9) break
+    }
+  }
+  return pins
 }
 
-/**
- * The hero: a tilted "living" city map. Pins drop in for live issues, the
- * highlighted one opens a glass data card. A pure-CSS/SVG scene (no map tiles)
- * so it is fast, animated, and unmistakably ours.
- */
 export function LivingMap({ issues = [] }) {
   const { t } = useI18n()
   const [active, setActive] = useState(null)
+  const pins = useMemo(() => previewPins(issues), [issues])
 
-  const pins = useMemo(() => {
-    const seen = new Set()
-    return issues
-      .filter((i) => {
-        if (seen.has(i.id)) return false
-        seen.add(i.id)
-        return true
-      })
-      .slice(0, 26)
-      .map((issue, index) => ({ ...issue, ...project(issue.lat, issue.lng), index }))
-  }, [issues])
+  const [motionPaused, setMotionPaused] = useState(false)
+  const [motionAllowed, setMotionAllowed] = useState(false)
+
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const updatePreference = () => setMotionAllowed(!preference.matches)
+    updatePreference()
+    preference.addEventListener('change', updatePreference)
+    return () => preference.removeEventListener('change', updatePreference)
+  }, [])
 
   const selected = active ? pins.find((p) => p.id === active) : null
 
   return (
-    <div className="relative">
-      <div style={{ perspective: '1400px' }} className="w-full">
-        <div
-          className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line bg-[#e9e7df] md:aspect-[16/11]"
-          style={{ transform: 'rotateX(22deg) rotateZ(-1.5deg)', transformStyle: 'preserve-3d' }}
-        >
-          {/* ward grid */}
-          <div
-            className="absolute inset-0 opacity-[0.5]"
-            style={{
-              backgroundImage:
-                'linear-gradient(to right, rgba(19,20,25,0.09) 1px, transparent 1px), linear-gradient(to bottom, rgba(19,20,25,0.09) 1px, transparent 1px)',
-              backgroundSize: '8% 10%',
-            }}
-          />
-          {/* parks */}
-          <div className="absolute left-[8%] top-[12%] h-[20%] w-[16%] rounded-[40%] bg-green/12" />
-          <div className="absolute right-[14%] top-[58%] h-[24%] w-[20%] rounded-[45%] bg-green/12" />
-          {/* river */}
-          <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 75" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M-2 44 C 18 38, 30 52, 48 46 S 78 30, 104 40" fill="none" stroke="#7fb4e8" strokeWidth="3.4" strokeLinecap="round" opacity="0.75" />
-            <path d="M-2 44 C 18 38, 30 52, 48 46 S 78 30, 104 40" fill="none" stroke="#ffffff" strokeWidth="0.6" opacity="0.5" />
-          </svg>
-          {/* main roads */}
-          <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 75" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M0 20 H100 M0 62 H100 M22 0 V75 M68 0 V75" fill="none" stroke="rgba(19,20,25,0.13)" strokeWidth="0.8" />
-          </svg>
-
-          {/* pins */}
-          {pins.map((pin) => {
-            const color = issueColor(pin)
+    <div className="relative isolate">
+      <div className="home-map-stage relative isolate aspect-[6/5] md:aspect-[7/5]">
+        <div className="home-map-plane absolute inset-x-[4%] inset-y-[2%] md:inset-x-[3%] xl:inset-x-0">
+          <div className="home-map-surface pointer-events-none absolute inset-0">
+            <img src="/civic-map-plane.svg" alt="" draggable="false" className="absolute inset-0 size-full object-fill" />
+            {motionAllowed && !motionPaused && (
+              <video
+                className="absolute inset-0 size-full object-fill"
+                src="/civic-map-motion.webm"
+                autoPlay
+                muted
+                loop
+                playsInline
+                aria-hidden="true"
+              />
+            )}
+          </div>
+          {pins.map((pin, index) => {
             const isActive = pin.id === active
+            const color = issueColor(pin)
+            const resolved = pin.status === 'RESOLVED' || pin.status === 'CONFIRMED'
             return (
               <button
                 key={pin.id}
+                type="button"
                 onClick={() => setActive(isActive ? null : pin.id)}
-                className="absolute -translate-x-1/2 -translate-y-full"
-                style={{ left: `${pin.x}%`, top: `${pin.y}%`, zIndex: isActive ? 30 : pin.demo ? 10 : 15, animation: `pin-drop 0.7s cubic-bezier(.16,1,.3,1) ${Math.min(pin.index * 70, 1400)}ms both` }}
-                aria-label={`${pin.category?.name} in ${pin.ward?.name}${pin.demo ? ` · ${t('common.demo')}` : ''}`}
+                className={`home-map-pin absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full ${isActive ? 'z-20' : 'z-10'}`}
+                style={{ left: `${pin.x}%`, top: `${pin.y}%`, '--pin-color': color === '#f28c28' ? '#a54d0a' : color }}
+                aria-label={`${pin.category?.name} · ${pin.ward?.name}`}
+                aria-pressed={isActive}
               >
-                <span className="relative block">
-                  {pin.priorityBand === 'urgent' && (
-                    <span className="animate-pulse-ring absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: color, opacity: 0.35 }} />
-                  )}
-                  <span
-                    className={`grid h-7 w-7 place-items-center rounded-full text-[10px] font-medium text-white shadow-md transition-transform ${pin.demo ? 'border-2 border-dashed border-card' : 'ring-2 ring-card'} ${isActive ? 'scale-110' : ''}`}
-                    style={{ background: color, transform: 'translateZ(20px)' }}
-                  >
-                    {pin.reportCount > 1 ? pin.reportCount : ''}
+                <span aria-hidden="true" className="home-map-pin-anchor" />
+                <span aria-hidden="true" className="home-map-pin-head">
+                  <span className="home-map-pin-symbol animate-pin-drop" style={{ animationDelay: `${index * 35}ms` }}>
+                    <IconMap size={30} className={resolved ? 'home-map-pin-resolved' : undefined} />
+                    {resolved && <IconCheck size={10} className="home-map-pin-check" />}
                   </span>
-                  <span className="absolute left-1/2 top-full h-2 w-px -translate-x-1/2" style={{ background: color }} />
                 </span>
               </button>
             )
@@ -95,9 +96,8 @@ export function LivingMap({ issues = [] }) {
         </div>
       </div>
 
-      {/* floating glass data card (not tilted) */}
       {selected && (
-        <div className="glass card-shadow absolute bottom-4 left-4 right-4 z-40 animate-fade-up rounded-[14px] p-4 md:left-auto md:right-6 md:w-[330px]">
+        <div className="absolute inset-x-3 bottom-14 z-30 rounded-xl border border-line bg-card p-3 shadow-lg sm:left-auto sm:w-80">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="mono text-[11px] tracking-wider text-ink-faint">{selected.code}</div>
@@ -115,18 +115,25 @@ export function LivingMap({ issues = [] }) {
           </div>
           <div className="hair-t mt-3 flex items-center justify-between pt-3">
             <span className="label">{selected.demo ? t('common.demo') : `Reported ${formatDateTime(selected.createdAt)}`}</span>
-            <button onClick={() => setActive(null)} className="label text-ink-soft hover:text-ink">
-              Close
+            <button type="button" onClick={() => setActive(null)} className="label text-ink-soft hover:text-ink">
+              {t('common.close')}
             </button>
           </div>
         </div>
       )}
 
-      {!selected && pins.length > 0 && (
-        <div className="pointer-events-none absolute bottom-4 left-4 z-20">
-          <span className="pill border-line bg-paper/80 text-ink-soft backdrop-blur">{pins.some((pin) => pin.demo) ? t('map.demoTap') : 'Tap a pin to see the issue'}</span>
-        </div>
-      )}
+      <div className="flex flex-wrap items-center gap-2 px-2 pt-3">
+        <Pill tone="blue">{t('common.demo')}</Pill>
+        {pins.length > 0 && <span className="text-xs text-ink-soft">{t('map.previewHint')}</span>}
+        {motionAllowed && (
+          <button type="button" onClick={() => setMotionPaused((paused) => !paused)} className="rounded-sm px-2 py-1 text-xs text-ink-soft hover:text-ink">
+            {t(motionPaused ? 'map.playMotion' : 'map.pauseMotion')}
+          </button>
+        )}
+        <Link to="/map" className="ml-auto rounded-sm text-sm font-semibold text-blue hover:underline">
+          {t('map.openFull')} <span aria-hidden="true">↗</span>
+        </Link>
+      </div>
     </div>
   )
 }
