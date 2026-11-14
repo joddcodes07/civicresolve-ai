@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useI18n } from '../../lib/i18n.jsx'
+import { useAuth } from '../../lib/auth.jsx'
 import { api } from '../../lib/api.js'
 import { getCurrentPosition } from '../../lib/image.js'
 import { compressImage } from '../../lib/image.js'
@@ -16,6 +17,7 @@ const CITY = { lat: 18.5204, lng: 73.8567 }
 export default function Chat() {
   const { t, speechLang } = useI18n()
   const { toast } = useToast()
+  const { user } = useAuth()
 
   const [messages, setMessages] = useState([])
   const [state, setState] = useState('ask_problem')
@@ -25,7 +27,7 @@ export default function Chat() {
   const [result, setResult] = useState(null)
   const scrollRef = useRef(null)
   const fileRef = useRef(null)
-  const speech = useSpeech({ lang: speechLang })
+  const speech = useSpeech({ lang: speechLang, signedIn: Boolean(user) })
 
   useEffect(() => {
     setMessages([{ role: 'bot', text: t('chat.start') }])
@@ -214,7 +216,7 @@ export default function Chat() {
               }}
               className="hair-t flex items-center gap-2 p-4"
             >
-              <button type="button" onClick={toggleVoice} className={`btn btn-ghost btn-sm ${speech.listening ? 'btn-danger' : ''}`} aria-label="Voice">
+              <button type="button" onClick={toggleVoice} className={`btn btn-ghost btn-sm ${speech.listening ? 'btn-danger' : ''}`} aria-label={t(speech.listening ? 'lodge.voiceStop' : 'lodge.voice')} disabled={!speech.supported || speech.processing || thinking || state === 'done'}>
                 <IconMic size={16} />
               </button>
               <input
@@ -227,6 +229,13 @@ export default function Chat() {
               <Button type="submit" variant="solid" size="sm" disabled={thinking || state === 'done'} icon={<IconSend size={15} />} />
               <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPhotoPicked} />
             </form>
+            {(speech.listening || speech.processing || speech.error || !speech.supported) && (
+              <p role="status" className="px-5 pb-3 text-sm text-ink-soft">
+                {t(speech.listening ? 'lodge.voiceListening' : speech.processing ? 'lodge.voiceProcessing' :
+                  speech.error === 'NotAllowedError' || speech.error === 'not-allowed' ? 'lodge.voiceDenied' :
+                  speech.error ? 'lodge.voiceFailed' : 'lodge.voiceUnsupported')}
+              </p>
+            )}
           </div>
         </div>
 

@@ -72,6 +72,9 @@ async function request(path, { method = 'GET', body, form, headers, signal } = {
   } catch {
     data = null
   }
+  if (res.ok && data === null) {
+    throw new ApiError('The server returned an unexpected response. Please retry.', 502)
+  }
   if (!res.ok) {
     throw new ApiError(data?.error || `Request failed (${res.status})`, res.status, data)
   }
