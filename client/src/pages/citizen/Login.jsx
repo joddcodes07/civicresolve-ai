@@ -75,6 +75,10 @@ export default function Login() {
         toast(`Welcome back, ${u.name.split(' ')[0]}`, { tone: 'green' })
         navigate(from || (u.role === 'ADMIN' ? '/admin' : u.role === 'OFFICER' ? '/officer' : '/'), { replace: true })
       } else {
+        if (!form.email && !form.phone) {
+          toast(t('login.needContact'), { tone: 'amber' })
+          return
+        }
         const payload = { name: form.name, password: form.password }
         if (form.email) payload.email = form.email
         if (form.phone) payload.phone = form.phone
@@ -83,7 +87,8 @@ export default function Login() {
         navigate(from || '/', { replace: true })
       }
     } catch (err) {
-      toast(err.message || t('login.failed'), { tone: 'red' })
+      const detail = err?.details?.[0]?.message
+      toast(detail || err.message || t('login.failed'), { tone: 'red' })
     } finally {
       setBusy(false)
     }

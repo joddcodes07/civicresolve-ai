@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(npm:*)",
+      "Shell(NODE_ENV=development node --input-type=module -e  import { classifyComplaint } from './src/services/aiService.js' try { const ai = await classifyComplaint('There is a large pothole near the school on MG Road', { includeMatched: true, lat: 18.5204, lng: 73.8567 }) console.log('AI OK', ai.categoryName, ai.departmentName, ai.confidence) } catch (e) { console.error('ERR', e.message) } process.exit(0) )",
+      "Shell(NODE_ENV=development npx prisma migrate status 2 >& 1)",
+      "Shell(NODE_ENV=development node --input-type=module -e  import { classifyComplaint } from './src/services/aiService.js' try { const ai = await classifyComplaint('There is a large pothole near the school on MG Road', { includeMatched: true, lat: 18.5204, lng: 73.8567 }) console.log('AI OK', ai.categoryName, '|', ai.departmentName, '|', ai.confidence) } catch (e) { console.error('ERR', e.message) } process.exit(0) )"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

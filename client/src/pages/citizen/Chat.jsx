@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useI18n } from '../../lib/i18n.jsx'
+import { useAuth } from '../../lib/auth.jsx'
 import { api } from '../../lib/api.js'
 import { getCurrentPosition } from '../../lib/image.js'
 import { compressImage } from '../../lib/image.js'
@@ -16,6 +17,8 @@ const CITY = { lat: 18.5204, lng: 73.8567 }
 export default function Chat() {
   const { t, speechLang } = useI18n()
   const { toast } = useToast()
+  const { user } = useAuth()
+  const navigate = useNavigate()
 
   const [messages, setMessages] = useState([])
   const [state, setState] = useState('ask_problem')
@@ -26,6 +29,12 @@ export default function Chat() {
   const scrollRef = useRef(null)
   const fileRef = useRef(null)
   const speech = useSpeech({ lang: speechLang })
+
+  useEffect(() => {
+    if (speech.error && speech.error !== 'unsupported') {
+      toast(speech.error === 'not-allowed' || speech.error === 'service-not-allowed' ? t('lodge.voiceDenied') : t('lodge.voiceFailed'), { tone: 'red' })
+    }
+  }, [speech.error, t, toast])
 
   useEffect(() => {
     setMessages([{ role: 'bot', text: t('chat.start') }])
@@ -42,6 +51,11 @@ export default function Chat() {
 
   async function handleSend(rawText) {
     if (thinking || state === 'done') return
+    if (!user) {
+      toast(t('chat.signInRequired'), { tone: 'amber' })
+      navigate('/login', { state: { from: '/chat' } })
+      return
+    }
     const value = (rawText ?? input).trim()
     if (state === 'ask_problem' && value.length < 10) {
       toast(t('chat.minDescription'), { tone: 'amber' })
@@ -111,10 +125,20 @@ export default function Chat() {
 
   function toggleVoice() {
     if (speech.listening) return speech.stop()
+    if (!speech.supported) {
+      toast(t('lodge.voiceUnsupported'), { tone: 'amber' })
+      return
+    }
     speech.start({ onResult: (transcript) => setInput(transcript), langOverride: speechLang })
   }
 
   async function submitComplaint() {
+    if (!user) {
+      say(t('chat.signInRequired'))
+      toast(t('chat.signInRequired'), { tone: 'amber' })
+      navigate('/login', { state: { from: '/chat' } })
+      return
+    }
     setThinking(true)
     try {
       const form = new FormData()

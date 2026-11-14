@@ -76,16 +76,21 @@ export default function Lodge() {
       speech.stop()
       return
     }
-    const ok = speech.start({
+    if (!speech.supported) {
+      toast(t('lodge.voiceUnsupported'), { tone: 'amber' })
+      return
+    }
+    speech.start({
       onResult: (transcript) => setText(transcript),
       langOverride: speechLang,
     })
-    if (!ok && speech.error === 'unsupported') toast(t('lodge.voiceUnsupported'), { tone: 'amber' })
   }, [speech, speechLang, t, toast])
 
   useEffect(() => {
     if (speech.error === 'not-allowed' || speech.error === 'service-not-allowed') {
       toast(t('lodge.voiceDenied'), { tone: 'red' })
+    } else if (speech.error && speech.error !== 'unsupported') {
+      toast(t('lodge.voiceFailed'), { tone: 'red' })
     }
   }, [speech.error, t, toast])
 
@@ -120,6 +125,11 @@ export default function Lodge() {
   }
 
   async function submit() {
+    if (!user) {
+      toast(t('lodge.signInRequired'), { tone: 'amber' })
+      navigate('/login', { state: { from: '/lodge' } })
+      return
+    }
     setSubmitting(true)
     try {
       const form = new FormData()
