@@ -20,7 +20,7 @@ async function importPune() {
     }
     for (const c of CATEGORIES) {
       const dept = await tx.department.findUniqueOrThrow({ where: { code: c.departmentCode } })
-      await tx.category.upsert({ where: { name: c.name }, update: {}, create: { name: c.name, departmentId: dept.id, keywords: c.keywords, defaultSeverity: c.defaultSeverity, dupRadiusMetres: 50 } })
+      await tx.category.upsert({ where: { name: c.name }, update: {}, create: { name: c.name, departmentId: dept.id, keywords: { create: c.keywords.map((keyword) => ({ keyword })) }, defaultSeverity: c.defaultSeverity, dupRadiusMetres: 50 } })
     }
     for (const f of collection.features) {
       const name = f.properties.Name1
