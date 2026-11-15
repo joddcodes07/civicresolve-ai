@@ -8,5 +8,8 @@ contextBridge.exposeInMainWorld('desktop', {
     getAppInfo: () => ipcRenderer.invoke('desktop:get-app-info'),
 
     selectImages: (maxFiles = 3) =>
-        ipcRenderer.invoke('desktop:select-images', maxFiles)
+        ipcRenderer.invoke('desktop:select-images', maxFiles),
+
+    selectDocuments: (options = {}) =>
+        ipcRenderer.invoke('desktop:select-documents', options)
 });
