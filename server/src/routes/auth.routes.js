@@ -10,6 +10,9 @@ import { sendEmail } from '../services/notifyService.js'
 import { env } from '../env.js'
 import { googleRoutes } from './google.routes.js'
 
+export const BCRYPT_SALT_ROUNDS = 10
+export const DUMMY_PASSWORD_HASH = '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'
+
 const router = Router()
 
 const registerSchema = z
@@ -82,7 +85,7 @@ router.post(
     if (existing) throw new HttpError(409, 'An account with those details already exists')
 
     const user = await prisma.user.create({
-      data: { name, email: email || null, phone: phone || null, passwordHash: await bcrypt.hash(password, 10), role: 'CITIZEN' },
+      data: { name, email: email || null, phone: phone || null, passwordHash: await bcrypt.hash(password, BCRYPT_SALT_ROUNDS), role: 'CITIZEN' },
     })
     res.status(201).json({ token: signToken(user), user: publicUser(user) })
   }),
@@ -107,10 +110,18 @@ router.post(
     const { identifier: rawIdentifier, password } = req.body
     const identifier = normalizeIdentifier(rawIdentifier)
     const user = await findUserByIdentifier(identifier)
-    const hash = user?.passwordHash || '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'
+    const hash = user?.passwordHash || DUMMY_PASSWORD_HASH
     const ok = await bcrypt.compare(password, hash)
     if (!user?.passwordHash || !ok) throw new HttpError(401, 'Invalid email/phone or password')
     if (user.role !== 'CITIZEN' && env.workEmailDomains.length && !env.workEmailDomains.includes(user.email?.split('@')[1])) throw new HttpError(403, 'Use an approved work account')
+
+    // Automatically rehash and upgrade legacy salt rounds if cost factor was lower than target
+    if (user.passwordHash && bcrypt.getRounds(user.passwordHash) < BCRYPT_SALT_ROUNDS) {
+      bcrypt.hash(password, BCRYPT_SALT_ROUNDS).then((newHash) => {
+        prisma.user.update({ where: { id: user.id }, data: { passwordHash: newHash } }).catch(() => {})
+      })
+    }
+
     res.json({ token: signToken(user), user: publicUser(user) })
   }),
 )
@@ -165,7 +176,7 @@ router.post('/forgot-password', validate(z.object({ email: z.string().trim().toL
 }))
 router.post('/reset-password', validate(z.object({ token: z.string().regex(/^[a-f0-9]{64}$/), password: z.string().min(8).max(100) })), asyncHandler(async (req, res) => {
   const tokenHash = createHash('sha256').update(req.body.token).digest('hex')
-  const passwordHash = await bcrypt.hash(req.body.password, 12)
+  const passwordHash = await bcrypt.hash(req.body.password, BCRYPT_SALT_ROUNDS)
   await prisma.$transaction(async tx => {
     const record = await tx.passwordResetToken.findUnique({ where: { tokenHash } })
     if (!record) throw new HttpError(400, 'Invalid or expired reset link')
