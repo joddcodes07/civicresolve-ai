@@ -2,6 +2,7 @@ const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const { registerIpcHandlers } = require('./ipc/index.cjs');
 const { configureSecurityHandlers } = require('./utils/security.cjs');
+const { setupApplicationMenu } = require('./menu/app.menu.cjs');
 
 // Configure application metadata
 app.setName('CivicResolve AI');
@@ -83,6 +84,7 @@ if (!gotTheLock) {
     });
 
     app.whenReady().then(() => {
+        setupApplicationMenu(isDev);
         createWindow();
 
         app.on('activate', () => {
