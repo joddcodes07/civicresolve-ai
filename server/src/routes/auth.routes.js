@@ -34,6 +34,39 @@ function normalizeIdentifier(raw) {
   return trimmed
 }
 
+const AUTH_USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+  passwordHash: true,
+  role: true,
+  tokenVersion: true,
+  departmentId: true,
+  department: { select: { name: true } },
+}
+
+async function findUserByIdentifier(identifier) {
+  if (identifier.includes('@')) {
+    return prisma.user.findUnique({
+      where: { email: identifier.toLowerCase() },
+      select: AUTH_USER_SELECT,
+    })
+  }
+  if (/^[0-9]{10,15}$/.test(identifier)) {
+    return prisma.user.findUnique({
+      where: { phone: identifier },
+      select: AUTH_USER_SELECT,
+    })
+  }
+  return prisma.user.findFirst({
+    where: {
+      OR: [{ email: identifier.toLowerCase() }, { phone: identifier }],
+    },
+    select: AUTH_USER_SELECT,
+  })
+}
+
 router.post(
   '/register',
   validate(registerSchema),
@@ -42,7 +75,10 @@ router.post(
     const or = []
     if (email) or.push({ email })
     if (phone) or.push({ phone })
-    const existing = await prisma.user.findFirst({ where: { OR: or } })
+    const existing = await prisma.user.findFirst({
+      where: { OR: or },
+      select: { id: true },
+    })
     if (existing) throw new HttpError(409, 'An account with those details already exists')
 
     const user = await prisma.user.create({
@@ -70,10 +106,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const { identifier: rawIdentifier, password } = req.body
     const identifier = normalizeIdentifier(rawIdentifier)
-    const user = await prisma.user.findFirst({
-      where: { OR: [{ email: identifier.toLowerCase() }, { phone: identifier }] },
-      include: { department: { select: { name: true } } },
-    })
+    const user = await findUserByIdentifier(identifier)
     const hash = user?.passwordHash || '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'
     const ok = await bcrypt.compare(password, hash)
     if (!user?.passwordHash || !ok) throw new HttpError(401, 'Invalid email/phone or password')
@@ -88,7 +121,15 @@ router.get(
   asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      include: { department: { select: { name: true } } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        departmentId: true,
+        department: { select: { name: true } },
+      },
     })
     res.json({ user: publicUser(user) })
   }),
