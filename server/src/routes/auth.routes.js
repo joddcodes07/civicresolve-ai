@@ -15,11 +15,24 @@ const router = Router()
 const registerSchema = z
   .object({
     name: z.string().trim().min(2, 'Enter your name').max(80),
-    email: z.string().trim().toLowerCase().email('Enter a valid email').optional(),
+    email: z.string().trim().toLowerCase().email('Enter a valid email').max(254, 'Email must not exceed 254 characters').optional(),
     phone: z.string().trim().regex(/^[0-9]{10,15}$/, 'Enter a valid phone number').optional(),
-    password: z.string().min(8, 'Password must be at least 8 characters').max(100),
+    password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must not exceed 100 characters'),
   })
   .refine((d) => d.email || d.phone, { message: 'Provide an email or a phone number', path: ['email'] })
+
+function normalizeIdentifier(raw) {
+  if (typeof raw !== 'string') return ''
+  const trimmed = raw.trim()
+  if (trimmed.includes('@')) {
+    return trimmed.toLowerCase()
+  }
+  const cleanPhone = trimmed.replace(/[\s\-()+]/g, '')
+  if (/^[0-9]{10,15}$/.test(cleanPhone)) {
+    return cleanPhone
+  }
+  return trimmed
+}
 
 router.post(
   '/register',
@@ -40,15 +53,23 @@ router.post(
 )
 
 const loginSchema = z.object({
-  identifier: z.string().trim().min(3, 'Enter your email or phone'),
-  password: z.string().min(1, 'Enter your password'),
+  identifier: z
+    .string({ required_error: 'Enter your email or phone' })
+    .trim()
+    .min(3, 'Enter your email or phone')
+    .max(254, 'Identifier must not exceed 254 characters'),
+  password: z
+    .string({ required_error: 'Enter your password' })
+    .min(1, 'Enter your password')
+    .max(100, 'Password must not exceed 100 characters'),
 })
 
 router.post(
   '/login',
   validate(loginSchema),
   asyncHandler(async (req, res) => {
-    const { identifier, password } = req.body
+    const { identifier: rawIdentifier, password } = req.body
+    const identifier = normalizeIdentifier(rawIdentifier)
     const user = await prisma.user.findFirst({
       where: { OR: [{ email: identifier.toLowerCase() }, { phone: identifier }] },
       include: { department: { select: { name: true } } },

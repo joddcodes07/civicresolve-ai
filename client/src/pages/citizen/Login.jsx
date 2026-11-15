@@ -71,6 +71,7 @@ export default function Login() {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (busy) return
     setFormError('')
     const email = form.email.trim()
     const phone = form.phone.trim()
@@ -81,11 +82,16 @@ export default function Login() {
     setBusy(true)
     try {
       if (isLogin) {
-        const u = await login({ identifier: form.identifier, password: form.password })
+        const identifier = form.identifier.trim()
+        if (!identifier) {
+          setFormError(t('login.identifierRequired') || 'Enter your email or phone')
+          return
+        }
+        const u = await login({ identifier, password: form.password })
         toast(`Welcome back, ${u.name.split(' ')[0]}`, { tone: 'green' })
         navigate(from || (u.role === 'ADMIN' ? '/admin' : u.role === 'OFFICER' ? '/officer' : '/'), { replace: true })
       } else {
-        const payload = { name: form.name, password: form.password }
+        const payload = { name: form.name.trim(), password: form.password }
         if (email) payload.email = email
         if (phone) payload.phone = phone
         const u = await register(payload)
@@ -100,6 +106,7 @@ export default function Login() {
   }
 
   async function quickLogin(account) {
+    if (busy) return
     setBusy(true)
     try {
       const u = await login({ identifier: account.identifier, password: account.password })
@@ -131,7 +138,7 @@ export default function Login() {
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               {isLogin ? (
                 <Field label={t('login.identifier')} required>
-                  <Input value={form.identifier} onChange={(e) => update('identifier', e.target.value)} placeholder="you@example.com" autoComplete="username" required />
+                  <Input value={form.identifier} onChange={(e) => update('identifier', e.target.value)} placeholder="you@example.com" autoComplete="username" maxLength={254} required />
                 </Field>
               ) : (
                 <>
@@ -140,10 +147,10 @@ export default function Login() {
                   </Field>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label={t('login.email')}>
-                      <Input type="email" value={form.email} onChange={(e) => update('email', e.target.value)} autoComplete="email" />
+                      <Input type="email" value={form.email} onChange={(e) => update('email', e.target.value)} autoComplete="email" maxLength={254} />
                     </Field>
                     <Field label={t('login.phone')}>
-                      <Input type="tel" value={form.phone} onChange={(e) => update('phone', e.target.value)} autoComplete="tel" inputMode="numeric" pattern="[0-9]{10,15}" />
+                      <Input type="tel" value={form.phone} onChange={(e) => update('phone', e.target.value)} autoComplete="tel" inputMode="numeric" pattern="[0-9]{10,15}" maxLength={15} />
                     </Field>
                   </div>
                 </>
@@ -151,7 +158,7 @@ export default function Login() {
 
               <div className="relative">
                 <Field label={t('login.password')} htmlFor="login-password" required>
-                  <Input id="login-password" className="pr-20" type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => update('password', e.target.value)} autoComplete={isLogin ? 'current-password' : 'new-password'} minLength={isLogin ? undefined : 8} maxLength={isLogin ? undefined : 100} required />
+                  <Input id="login-password" className="pr-20" type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => update('password', e.target.value)} autoComplete={isLogin ? 'current-password' : 'new-password'} minLength={isLogin ? undefined : 8} maxLength={100} required />
                 </Field>
                 <button
                   type="button"
