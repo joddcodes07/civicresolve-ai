@@ -5,5 +5,8 @@ contextBridge.exposeInMainWorld('desktop', {
 
     platform: process.platform,
 
-    getAppInfo: () => ipcRenderer.invoke('desktop:get-app-info')
+    getAppInfo: () => ipcRenderer.invoke('desktop:get-app-info'),
+
+    selectImages: (maxFiles = 3) =>
+        ipcRenderer.invoke('desktop:select-images', maxFiles)
 });
