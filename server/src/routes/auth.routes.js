@@ -5,6 +5,7 @@ import { prisma } from '../db.js'
 import { signToken, requireAuth, publicUser } from '../middleware/auth.js'
 import { validate } from '../middleware/validate.js'
 import { asyncHandler, HttpError } from '../middleware/error.js'
+import { loginLimiter, registerLimiter, passwordResetLimiter } from '../middleware/rateLimit.js'
 import { randomBytes, createHash } from 'node:crypto'
 import { sendEmail } from '../services/notifyService.js'
 import { env } from '../env.js'
@@ -72,6 +73,7 @@ async function findUserByIdentifier(identifier) {
 
 router.post(
   '/register',
+  registerLimiter,
   validate(registerSchema),
   asyncHandler(async (req, res) => {
     const { name, email, phone, password } = req.body
@@ -105,6 +107,7 @@ const loginSchema = z.object({
 
 router.post(
   '/login',
+  loginLimiter,
   validate(loginSchema),
   asyncHandler(async (req, res) => {
     const { identifier: rawIdentifier, password } = req.body
@@ -159,7 +162,7 @@ router.get('/demo-accounts', (_req, res) => {
 })
 
 // No account discovery and no reset secrets in API responses or logs.
-router.post('/forgot-password', validate(z.object({ email: z.string().trim().toLowerCase().email() })), asyncHandler(async (req, res) => {
+router.post('/forgot-password', passwordResetLimiter, validate(z.object({ email: z.string().trim().toLowerCase().email() })), asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({ where: { email: req.body.email } })
   if (user?.passwordHash && env.mail.enabled) {
     const token = randomBytes(32).toString('hex')
@@ -174,7 +177,7 @@ router.post('/forgot-password', validate(z.object({ email: z.string().trim().toL
   }
   res.json({ message: 'If the account exists, a password reset email will be sent.' })
 }))
-router.post('/reset-password', validate(z.object({ token: z.string().regex(/^[a-f0-9]{64}$/), password: z.string().min(8).max(100) })), asyncHandler(async (req, res) => {
+router.post('/reset-password', passwordResetLimiter, validate(z.object({ token: z.string().regex(/^[a-f0-9]{64}$/), password: z.string().min(8).max(100) })), asyncHandler(async (req, res) => {
   const tokenHash = createHash('sha256').update(req.body.token).digest('hex')
   const passwordHash = await bcrypt.hash(req.body.password, BCRYPT_SALT_ROUNDS)
   await prisma.$transaction(async tx => {

@@ -14,13 +14,37 @@ export const apiLimiter = rateLimit({
   message: jsonMessage('Too many requests — please slow down.'),
 })
 
-export const authLimiter = rateLimit({
+// Targeted rate limiter for login attempts with protection against brute-force attacks.
+// skipSuccessfulRequests ensures legitimate users never get locked out by normal logins.
+export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 60,
+  limit: 15,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
-  message: jsonMessage('Too many sign-in attempts. Try again in a few minutes.'),
+  message: jsonMessage('Too many failed sign-in attempts. Try again in 15 minutes.'),
 })
+
+// Protect account creation from spam bots.
+export const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: jsonMessage('Too many accounts created from this connection. Try again in an hour.'),
+})
+
+// Protect password reset endpoints from email bombing and token enumeration.
+export const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: jsonMessage('Too many password reset attempts. Try again in 15 minutes.'),
+})
+
+// Kept for backward compatibility
+export const authLimiter = loginLimiter
 
 // Spam protection: a citizen may lodge a handful of complaints per hour.
 export const complaintLimiter = rateLimit({
