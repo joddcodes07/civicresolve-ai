@@ -130,6 +130,16 @@ test('backend integration against isolated PostgreSQL', { skip: process.env.RUN_
       const { body: departments } = await request('/api/meta/departments')
       assert.equal(departments.departments.reduce((sum, d) => sum + d.complaintCount, 0), body.stats.total)
     })
+    await t.test('category reference data exposes normalized atomic keywords', async () => {
+      const { status, body } = await request('/api/meta/categories')
+      assert.equal(status, 200)
+      assert.ok(body.categories.length > 0)
+      assert.ok(body.categories.every((category) => Array.isArray(category.keywords)))
+      assert.ok(body.categories.every((category) => category.keywords.length > 0))
+      const exposed = body.categories.reduce((total, category) => total + category.keywords.length, 0)
+      assert.ok(exposed >= 277)
+      assert.equal(exposed, await prisma.categoryKeyword.count())
+    })
     await t.test('duplicates use distance/category/seven days without text overlap', async () => {
       const { findDuplicateCandidate } = await import('../services/dupService.js')
       const stored = await prisma.complaint.findUnique({ where: { id: complaint.id } })
