@@ -32,9 +32,9 @@ export default function Login() {
   const isLogin = mode === 'login'
 
   useEffect(() => {
-    api.get('/api/auth/google/status').then(({ enabled }) => setGoogleEnabled(enabled)).catch(() => {})
-    api.get('/api/meta/stats').then(d => setStats(d.stats)).catch(() => {})
-    api.get('/api/auth/demo-accounts').then((d) => setDemo(d.accounts || [])).catch(() => {})
+    api.get('/api/auth/google/status').then(({ enabled }) => setGoogleEnabled(enabled)).catch(() => { })
+    api.get('/api/meta/stats').then(d => setStats(d.stats)).catch(() => { })
+    api.get('/api/auth/demo-accounts').then((d) => setDemo(d.accounts || [])).catch(() => { })
   }, [])
 
   useEffect(() => {
