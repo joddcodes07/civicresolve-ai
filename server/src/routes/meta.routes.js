@@ -37,12 +37,16 @@ router.get(
   asyncHandler(async (_req, res) => {
     const categories = await prisma.category.findMany({
       orderBy: { name: 'asc' },
-      include: { department: { select: { id: true, name: true, code: true, slaHours: true } } },
+      include: {
+        department: { select: { id: true, name: true, code: true, slaHours: true } },
+        keywords: { select: { keyword: true }, orderBy: { keyword: 'asc' } },
+      },
     })
     res.json({
       categories: categories.map((c) => ({
         id: c.id, name: c.name, subType: c.subType, defaultSeverity: c.defaultSeverity,
         dupRadiusMetres: c.dupRadiusMetres, department: c.department,
+        keywords: c.keywords.map((k) => k.keyword),
       })),
     })
   }),
