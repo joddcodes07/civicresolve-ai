@@ -1,6 +1,7 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const { registerIpcHandlers } = require('./ipc/index.cjs');
+const { configureSecurityHandlers } = require('./utils/security.cjs');
 
 const isDev = !app.isPackaged;
 
@@ -20,9 +21,14 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.cjs'),
             contextIsolation: true,
             nodeIntegration: false,
-            sandbox: true
+            sandbox: true,
+            webSecurity: true,
+            allowRunningInsecureContent: false
         }
     });
+
+    // Enforce origin, navigation, and window open security guards
+    configureSecurityHandlers(mainWindow);
 
     if (isDev) {
         mainWindow.loadURL('http://127.0.0.1:5173');
