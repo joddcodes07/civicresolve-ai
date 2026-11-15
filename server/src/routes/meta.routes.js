@@ -1,26 +1,32 @@
 // Public reference data: departments, categories, wards, city config and the
-// live counters shown on the home page.
+// demo counters shown on the home page.
 import { Router } from 'express'
 import { prisma } from '../db.js'
 import { asyncHandler } from '../middleware/error.js'
 import { CITY } from '../data/taxonomy.js'
 import { getDemoIssues, getDemoStats } from '../data/demoIssues.js'
 import { aiStatus } from '../services/aiService.js'
-import { CLOSED_STATUSES } from '../lib/constants.js'
 
 const router = Router()
 
 router.get(
   '/departments',
   asyncHandler(async (_req, res) => {
-    const departments = await prisma.department.findMany({
-      orderBy: { name: 'asc' },
-      include: { _count: { select: { complaints: true, categories: true } } },
-    })
+    const [departments, issues] = await Promise.all([
+      prisma.department.findMany({
+        orderBy: { name: 'asc' },
+        include: { _count: { select: { categories: true } } },
+      }),
+      getDemoIssues(),
+    ])
+    const counts = new Map()
+    for (const { category, reportCount } of issues) {
+      counts.set(category.departmentId, (counts.get(category.departmentId) ?? 0) + reportCount)
+    }
     res.json({
       departments: departments.map((d) => ({
         id: d.id, name: d.name, code: d.code, slaHours: d.slaHours,
-        complaintCount: d._count.complaints, categoryCount: d._count.categories,
+        complaintCount: counts.get(d.id) ?? 0, categoryCount: d._count.categories,
       })),
     })
   }),
@@ -61,38 +67,16 @@ router.get('/city', (_req, res) => {
 
 router.get(
   '/stats',
-  asyncHandler(async (req, res) => {
-    const puneOffset = 330 * 60_000
-    const today = new Date(Date.now() + puneOffset)
-    const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1) - puneOffset)
-    const [total, resolvedOrConfirmed, departments, wards, openCount, issues, verified, thisMonth] = await Promise.all([
-      prisma.complaint.count(),
-      prisma.complaint.count({ where: { status: { in: CLOSED_STATUSES } } }),
+  asyncHandler(async (_req, res) => {
+    const [samples, departments, wards] = await Promise.all([
+      getDemoIssues(),
       prisma.department.count(),
       prisma.ward.count(),
-      prisma.complaint.count({ where: { status: { notIn: CLOSED_STATUSES } } }),
-      prisma.issue.count(),
-      prisma.complaint.count({ where: { status: 'CONFIRMED' } }),
-      prisma.complaint.count({ where: { createdAt: { gte: monthStart } } }),
     ])
-    const { demo: mode } = req.query
-    const demo = mode === 'preview' || mode === 'mixed' || (mode === '1' && total === 0)
-    const demoStats = demo ? getDemoStats(await getDemoIssues()) : null
+    const demoStats = getDemoStats(samples)
     res.json({
-      demoStats: demoStats?.total ? demoStats : null,
-      stats: {
-        total,
-        thisMonth,
-        languages: 3,
-        formulas: 7,
-        resolved: resolvedOrConfirmed,
-        verified,
-        open: openCount,
-        departments,
-        wards,
-        issues,
-        verifiedRate: resolvedOrConfirmed ? Math.round((verified / resolvedOrConfirmed) * 100) : 0,
-      },
+      demoStats,
+      stats: { ...demoStats, departments, wards, languages: 3, formulas: 7 },
     })
   }),
 )

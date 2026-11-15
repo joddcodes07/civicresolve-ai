@@ -201,17 +201,23 @@ auto-confirms anything resolved 7 days ago with no reply.
 All queries go through Prisma (no string-built SQL). Requests are rate-limited, inputs are validated
 with Zod, and role guards protect every officer/admin route.
 
+`GET /api/officer/queue` accepts `filter` (`open` by default, plus `urgent`, `high`, `safety`,
+`breached`, `needs_review`, `reopened`, `in_progress`, `resolved`) and `page` (a positive integer,
+`1` by default). An unsupported `filter` or non-positive/non-integer `page` returns `400`
+(`{ "error": "Invalid queue filter" }` / `{ "error": "Invalid page" }`).
+
 ---
 
 ## Verification
 
 ```bash
-npm test        # 24 unit tests
+npm test        # 34 unit tests
 ```
 
 The suite covers the F1 worked example (84), crowd/overdue caps, F2 colours, F3 levels, F5/F6/F7
 worked examples, the proof-of-fix gate (blocks "forwarded…", requires an after-photo), duplicate
-similarity, point-in-polygon, PII masking, and the classifier across English / Hindi / Marathi / Hinglish.
+similarity, point-in-polygon, PII masking, officer queue query validation, and the classifier across
+English / Hindi / Marathi / Hinglish.
 
 ---
 

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
 import { useI18n } from '../../lib/i18n.jsx'
 import { useFetch } from '../../hooks/useFetch.js'
 import { SectionLabel, Skeleton } from '../../components/ui/Primitives.jsx'
@@ -7,7 +6,6 @@ import { Pill, BandPill } from '../../components/ui/Pills.jsx'
 import { Tabs } from '../../components/ui/Tabs.jsx'
 import { IssueMap } from '../../components/domain/IssueMap.jsx'
 import { BAND_HEX } from '../../lib/mapPins.js'
-import { timeAgo } from '../../lib/format.js'
 
 const FILTERS = [
   { value: 'all', label: 'All' },
@@ -20,36 +18,23 @@ export default function PublicMap() {
   const { t } = useI18n()
   const [filter, setFilter] = useState('all')
   const [heat, setHeat] = useState(false)
-  const [params] = useSearchParams()
-  const preview = params.get('demo') === '1'
-  const liveOnly = params.get('demo') === '0'
-  const demoMode = preview ? 'preview' : liveOnly ? '0' : 'mixed'
-  const { data, loading, error, reload } = useFetch(`/api/issues/map?demo=${demoMode}`)
+  const { data, loading, error, reload } = useFetch('/api/issues/map?demo=preview')
 
-  const issues = data?.issues || []
-  const filtered = useMemo(() => (filter === 'all' ? issues : issues.filter((i) => i.priorityBand === filter || (filter === 'normal' && i.priorityBand === 'low'))), [issues, filter])
-  const demoCount = filtered.filter((issue) => issue.demo).length
-  const liveCount = filtered.length - demoCount
-  const top = useMemo(() => [...filtered].sort((a, b) =>
-    Number(Boolean(a.demo)) - Number(Boolean(b.demo)) || b.reportCount - a.reportCount,
-  ).slice(0, 12), [filtered])
+  const filtered = useMemo(() => (data?.issues ?? []).filter((issue) =>
+    issue.demo && (filter === 'all' || issue.priorityBand === filter || (filter === 'normal' && issue.priorityBand === 'low')),
+  ), [data, filter])
+  const top = useMemo(() => [...filtered].sort((a, b) => b.reportCount - a.reportCount).slice(0, 12), [filtered])
 
   return (
     <div className="frame py-10">
       <SectionLabel index={7} right={data && !loading && !error && (
-        <div className="flex flex-wrap gap-2">
-          {!preview && <Pill tone="green">{liveCount} {t('map.liveIssues')}</Pill>}
-          {data.demo && <Pill tone="blue">{demoCount} {t('map.demoIssues')}</Pill>}
-        </div>
+        <Pill tone="blue">{filtered.length.toLocaleString()} {t('map.demoIssues')}</Pill>
       )}>
         {t('map.title')}
       </SectionLabel>
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="max-w-xl font-display text-4xl tracking-tight">{t('map.sub')}</h1>
+        <h1 className="max-w-xl font-display text-4xl tracking-tight">{t('map.demoHeading')}</h1>
         <div className="flex flex-wrap items-center gap-3">
-          <Link to={preview || liveOnly ? '/map' : '/map?demo=0'} preventScrollReset className="pill border border-line text-blue">
-            {t(preview || liveOnly ? 'common.showMixed' : 'common.showLive')}
-          </Link>
           <Tabs tabs={FILTERS} value={filter} onChange={setFilter} />
           <button
             aria-pressed={heat}
@@ -61,7 +46,7 @@ export default function PublicMap() {
         </div>
       </div>
 
-      {data?.demo && !loading && <p className="mt-4 text-sm text-ink-soft">{t('map.demoMarkers')}</p>}
+      {data?.demo && !loading && <p className="mt-4 text-sm text-ink-soft">{t('map.demoNote')}</p>}
       {error && (
         <div role="status" className="card mt-6 flex flex-wrap items-center gap-3 p-4">
           <span>{t('map.unavailable')}</span>
@@ -107,7 +92,7 @@ export default function PublicMap() {
                   </div>
                   <div className="mt-2 flex items-center gap-2">
                     <BandPill band={issue.priorityBand} score={issue.priority} />
-                    <span className="label">{issue.demo ? t('common.demo') : timeAgo(issue.createdAt)}</span>
+                    <span className="label">{t('common.demo')}</span>
                   </div>
                 </div>
               ))}

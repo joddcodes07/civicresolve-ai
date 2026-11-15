@@ -5,58 +5,126 @@ import { prisma } from '../db.js'
 import { signToken, requireAuth, publicUser } from '../middleware/auth.js'
 import { validate } from '../middleware/validate.js'
 import { asyncHandler, HttpError } from '../middleware/error.js'
+import { loginLimiter, registerLimiter, passwordResetLimiter } from '../middleware/rateLimit.js'
 import { randomBytes, createHash } from 'node:crypto'
 import { sendEmail } from '../services/notifyService.js'
 import { env } from '../env.js'
 import { googleRoutes } from './google.routes.js'
+
+export const BCRYPT_SALT_ROUNDS = 10
+export const DUMMY_PASSWORD_HASH = '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'
 
 const router = Router()
 
 const registerSchema = z
   .object({
     name: z.string().trim().min(2, 'Enter your name').max(80),
-    email: z.string().trim().toLowerCase().email('Enter a valid email').optional(),
+    email: z.string().trim().toLowerCase().email('Enter a valid email').max(254, 'Email must not exceed 254 characters').optional(),
     phone: z.string().trim().regex(/^[0-9]{10,15}$/, 'Enter a valid phone number').optional(),
-    password: z.string().min(8, 'Password must be at least 8 characters').max(100),
+    password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must not exceed 100 characters'),
   })
   .refine((d) => d.email || d.phone, { message: 'Provide an email or a phone number', path: ['email'] })
 
+function normalizeIdentifier(raw) {
+  if (typeof raw !== 'string') return ''
+  const trimmed = raw.trim()
+  if (trimmed.includes('@')) {
+    return trimmed.toLowerCase()
+  }
+  const cleanPhone = trimmed.replace(/[\s\-()+]/g, '')
+  if (/^[0-9]{10,15}$/.test(cleanPhone)) {
+    return cleanPhone
+  }
+  return trimmed
+}
+
+const AUTH_USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+  passwordHash: true,
+  role: true,
+  tokenVersion: true,
+  departmentId: true,
+  department: { select: { name: true } },
+}
+
+async function findUserByIdentifier(identifier) {
+  if (identifier.includes('@')) {
+    return prisma.user.findUnique({
+      where: { email: identifier.toLowerCase() },
+      select: AUTH_USER_SELECT,
+    })
+  }
+  if (/^[0-9]{10,15}$/.test(identifier)) {
+    return prisma.user.findUnique({
+      where: { phone: identifier },
+      select: AUTH_USER_SELECT,
+    })
+  }
+  return prisma.user.findFirst({
+    where: {
+      OR: [{ email: identifier.toLowerCase() }, { phone: identifier }],
+    },
+    select: AUTH_USER_SELECT,
+  })
+}
+
 router.post(
   '/register',
+  registerLimiter,
   validate(registerSchema),
   asyncHandler(async (req, res) => {
     const { name, email, phone, password } = req.body
     const or = []
     if (email) or.push({ email })
     if (phone) or.push({ phone })
-    const existing = await prisma.user.findFirst({ where: { OR: or } })
+    const existing = await prisma.user.findFirst({
+      where: { OR: or },
+      select: { id: true },
+    })
     if (existing) throw new HttpError(409, 'An account with those details already exists')
 
     const user = await prisma.user.create({
-      data: { name, email: email || null, phone: phone || null, passwordHash: await bcrypt.hash(password, 10), role: 'CITIZEN' },
+      data: { name, email: email || null, phone: phone || null, passwordHash: await bcrypt.hash(password, BCRYPT_SALT_ROUNDS), role: 'CITIZEN' },
     })
     res.status(201).json({ token: signToken(user), user: publicUser(user) })
   }),
 )
 
 const loginSchema = z.object({
-  identifier: z.string().trim().min(3, 'Enter your email or phone'),
-  password: z.string().min(1, 'Enter your password'),
+  identifier: z
+    .string({ required_error: 'Enter your email or phone' })
+    .trim()
+    .min(3, 'Enter your email or phone')
+    .max(254, 'Identifier must not exceed 254 characters'),
+  password: z
+    .string({ required_error: 'Enter your password' })
+    .min(1, 'Enter your password')
+    .max(100, 'Password must not exceed 100 characters'),
 })
 
 router.post(
   '/login',
+  loginLimiter,
   validate(loginSchema),
   asyncHandler(async (req, res) => {
-    const { identifier, password } = req.body
-    const user = await prisma.user.findFirst({
-      where: { OR: [{ email: identifier.toLowerCase() }, { phone: identifier }] },
-      include: { department: { select: { name: true } } },
-    })
-    const hash = user?.passwordHash || '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'
+    const { identifier: rawIdentifier, password } = req.body
+    const identifier = normalizeIdentifier(rawIdentifier)
+    const user = await findUserByIdentifier(identifier)
+    const hash = user?.passwordHash || DUMMY_PASSWORD_HASH
     const ok = await bcrypt.compare(password, hash)
     if (!user?.passwordHash || !ok) throw new HttpError(401, 'Invalid email/phone or password')
     if (user.role !== 'CITIZEN' && env.workEmailDomains.length && !env.workEmailDomains.includes(user.email?.split('@')[1])) throw new HttpError(403, 'Use an approved work account')
+
+    // Automatically rehash and upgrade legacy salt rounds if cost factor was lower than target
+    if (user.passwordHash && bcrypt.getRounds(user.passwordHash) < BCRYPT_SALT_ROUNDS) {
+      bcrypt.hash(password, BCRYPT_SALT_ROUNDS).then((newHash) => {
+        prisma.user.update({ where: { id: user.id }, data: { passwordHash: newHash } }).catch(() => {})
+      })
+    }
+
     res.json({ token: signToken(user), user: publicUser(user) })
   }),
 )
@@ -67,7 +135,15 @@ router.get(
   asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      include: { department: { select: { name: true } } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        departmentId: true,
+        department: { select: { name: true } },
+      },
     })
     res.json({ user: publicUser(user) })
   }),
@@ -86,7 +162,7 @@ router.get('/demo-accounts', (_req, res) => {
 })
 
 // No account discovery and no reset secrets in API responses or logs.
-router.post('/forgot-password', validate(z.object({ email: z.string().trim().toLowerCase().email() })), asyncHandler(async (req, res) => {
+router.post('/forgot-password', passwordResetLimiter, validate(z.object({ email: z.string().trim().toLowerCase().email() })), asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({ where: { email: req.body.email } })
   if (user?.passwordHash && env.mail.enabled) {
     const token = randomBytes(32).toString('hex')
@@ -101,9 +177,9 @@ router.post('/forgot-password', validate(z.object({ email: z.string().trim().toL
   }
   res.json({ message: 'If the account exists, a password reset email will be sent.' })
 }))
-router.post('/reset-password', validate(z.object({ token: z.string().regex(/^[a-f0-9]{64}$/), password: z.string().min(8).max(100) })), asyncHandler(async (req, res) => {
+router.post('/reset-password', passwordResetLimiter, validate(z.object({ token: z.string().regex(/^[a-f0-9]{64}$/), password: z.string().min(8).max(100) })), asyncHandler(async (req, res) => {
   const tokenHash = createHash('sha256').update(req.body.token).digest('hex')
-  const passwordHash = await bcrypt.hash(req.body.password, 12)
+  const passwordHash = await bcrypt.hash(req.body.password, BCRYPT_SALT_ROUNDS)
   await prisma.$transaction(async tx => {
     const record = await tx.passwordResetToken.findUnique({ where: { tokenHash } })
     if (!record) throw new HttpError(400, 'Invalid or expired reset link')

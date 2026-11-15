@@ -32,13 +32,14 @@ export default function Lodge() {
   const [categoryIdOverride, setCategoryIdOverride] = useState('')
   const [categories, setCategories] = useState([])
   const [preview, setPreview] = useState(null)
+  const [previewError, setPreviewError] = useState(false)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [locating, setLocating] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState(null)
   const [joinBusy, setJoinBusy] = useState(false)
 
-  const speech = useSpeech({ lang: speechLang })
+  const speech = useSpeech({ lang: speechLang, signedIn: Boolean(user) })
   const debouncedText = useDebounce(text, 1200)
 
   useEffect(() => {
@@ -50,10 +51,13 @@ export default function Lodge() {
     const trimmed = debouncedText.trim()
     if (trimmed.length < 6) {
       setPreview(null)
+      setPreviewLoading(false)
+      setPreviewError(false)
       return
     }
     let alive = true
     setPreviewLoading(true)
+    setPreviewError(false)
     api
       .post('/api/ai/preview', { text: trimmed, lat: coords.lat, lng: coords.lng })
       .then((data) => {
@@ -62,7 +66,12 @@ export default function Lodge() {
           setWard(data.ward)
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (alive) {
+          setPreview(null)
+          setPreviewError(true)
+        }
+      })
       .finally(() => {
         if (alive) setPreviewLoading(false)
       })
@@ -76,18 +85,12 @@ export default function Lodge() {
       speech.stop()
       return
     }
-    const ok = speech.start({
+    speech.start({
       onResult: (transcript) => setText(transcript),
       langOverride: speechLang,
     })
-    if (!ok && speech.error === 'unsupported') toast(t('lodge.voiceUnsupported'), { tone: 'amber' })
-  }, [speech, speechLang, t, toast])
+  }, [speech, speechLang])
 
-  useEffect(() => {
-    if (speech.error === 'not-allowed' || speech.error === 'service-not-allowed') {
-      toast(t('lodge.voiceDenied'), { tone: 'red' })
-    }
-  }, [speech.error, t, toast])
 
   async function locate() {
     setLocating(true)
@@ -251,12 +254,14 @@ export default function Lodge() {
                   type="button"
                   onClick={toggleVoice}
                   className={`btn btn-sm ${speech.listening ? 'btn-danger' : 'btn-ghost'}`}
-                  disabled={!speech.supported}
+                  disabled={!speech.supported || speech.processing}
                 >
                   <IconMic size={16} />
                   {speech.listening ? t('lodge.voiceStop') : t('lodge.voice')}
                 </button>
                 {speech.listening && <span className="label text-red">{t('lodge.voiceListening')}</span>}
+                {speech.processing && <span role="status" className="label">{t('lodge.voiceProcessing')}</span>}
+                {speech.error && <span role="status" className="text-sm text-ink-soft">{t(speech.error === 'NotAllowedError' || speech.error === 'not-allowed' ? 'lodge.voiceDenied' : 'lodge.voiceFailed')}</span>}
                 {!speech.supported && <span className="label">{t('lodge.voiceUnsupported')}</span>}
                 <span className="ml-auto label tabular">{text.trim().length} chars</span>
               </div>
@@ -360,9 +365,8 @@ export default function Lodge() {
               onJoinDuplicate={handleJoin}
               duplicateBusy={joinBusy}
             />
-            <p className="mt-4 text-center text-[12px] text-ink-faint">
-              {t('lodge.aiLowConfidence')}
-            </p>
+            {previewError && <p role="status" className="mt-4 text-sm text-ink-soft">{t('lodge.previewFailed')}</p>}
+            {preview?.ai?.needsReview && <p className="mt-4 text-center text-[12px] text-ink-faint">{t('lodge.aiLowConfidence')}</p>}
           </div>
         </div>
       </div>

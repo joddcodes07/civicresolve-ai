@@ -56,7 +56,7 @@ export default function Departments() {
                 )}
               </div>
               <div className="hair-t mt-4 pt-4">
-                <span className="label">{dept.complaintCount} complaints handled</span>
+                <span className="label">{dept.complaintCount} {t('home.demoComplaints')}</span>
               </div>
             </div>
           )
