@@ -14,5 +14,11 @@ contextBridge.exposeInMainWorld('desktop', {
         ipcRenderer.invoke('desktop:select-documents', options),
 
     saveFile: (options = {}) =>
-        ipcRenderer.invoke('desktop:save-file', options)
+        ipcRenderer.invoke('desktop:save-file', options),
+
+    showNotification: (options = {}) =>
+        ipcRenderer.invoke('desktop:show-notification', options),
+
+    isNotificationSupported: () =>
+        ipcRenderer.invoke('desktop:is-notification-supported')
 });

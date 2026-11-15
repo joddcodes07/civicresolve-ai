@@ -87,6 +87,15 @@ export default function Track() {
       if (payload.code === code) {
         toast(`Update: ${payload.statusLabel}${payload.note ? ` — ${payload.note}` : ''}`, { tone: 'blue' })
         load(code, true)
+
+        if (window.desktop?.isElectron && window.desktop?.showNotification) {
+          window.desktop
+            .showNotification({
+              title: `CivicResolve: ${payload.code || 'Complaint Update'}`,
+              body: `Status: ${payload.statusLabel || 'Updated'}`
+            })
+            .catch(() => {})
+        }
       }
     },
     [code],
@@ -96,6 +105,15 @@ export default function Track() {
     'message:new',
     (message) => {
       setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]))
+
+      if (window.desktop?.isElectron && window.desktop?.showNotification) {
+        window.desktop
+          .showNotification({
+            title: `CivicResolve: ${code || 'New Message'}`,
+            body: 'A new update was posted on your complaint.'
+          })
+          .catch(() => {})
+      }
     },
     [code],
   )
