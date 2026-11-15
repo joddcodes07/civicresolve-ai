@@ -11,5 +11,8 @@ contextBridge.exposeInMainWorld('desktop', {
         ipcRenderer.invoke('desktop:select-images', maxFiles),
 
     selectDocuments: (options = {}) =>
-        ipcRenderer.invoke('desktop:select-documents', options)
+        ipcRenderer.invoke('desktop:select-documents', options),
+
+    saveFile: (options = {}) =>
+        ipcRenderer.invoke('desktop:save-file', options)
 });

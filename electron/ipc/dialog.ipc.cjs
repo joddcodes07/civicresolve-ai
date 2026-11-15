@@ -1,7 +1,8 @@
 const { ipcMain, dialog } = require('electron');
+const path = require('path');
 const { validateSender } = require('../utils/security.cjs');
-const { validatePositiveInteger } = require('../utils/validators.cjs');
-const { readImageFile, readDocumentFile } = require('../services/file.service.cjs');
+const { validatePositiveInteger, validateSafeString } = require('../utils/validators.cjs');
+const { readImageFile, readDocumentFile, saveFileSafe } = require('../services/file.service.cjs');
 
 function registerDialogIpc() {
   ipcMain.handle('desktop:select-images', async (event, maxFiles = 3) => {
@@ -83,6 +84,35 @@ function registerDialogIpc() {
     }
 
     return documents;
+  });
+
+  ipcMain.handle('desktop:save-file', async (event, options = {}) => {
+    const senderWindow = validateSender(event);
+
+    const defaultName = validateSafeString(options?.defaultName, 255) || 'export.txt';
+    const sanitizedName = path.basename(defaultName);
+
+    if (typeof options?.content !== 'string') {
+      throw new Error('Content must be a string');
+    }
+
+    const result = await dialog.showSaveDialog(senderWindow, {
+      title: options?.title || 'Save File',
+      defaultPath: sanitizedName,
+      filters: Array.isArray(options?.filters) && options.filters.length > 0
+        ? options.filters
+        : [{ name: 'All Files', extensions: ['*'] }]
+    });
+
+    if (result.canceled || !result.filePath) {
+      return { canceled: true };
+    }
+
+    return await saveFileSafe({
+      filePath: result.filePath,
+      content: options.content,
+      isBase64: Boolean(options.isBase64)
+    });
   });
 }
 
