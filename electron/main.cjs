@@ -1,69 +1,11 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const fs = require('fs/promises');
+const { registerIpcHandlers } = require('./ipc/index.cjs');
 
 const isDev = !app.isPackaged;
 
-ipcMain.handle('desktop:get-app-info', () => {
-    return {
-        name: app.getName(),
-        version: app.getVersion(),
-        platform: process.platform,
-        isPackaged: app.isPackaged
-    };
-});
-
-ipcMain.handle('desktop:select-images', async (event, maxFiles = 3) => {
-    // Restrict the number of files requested by the renderer
-    const safeMax = Math.max(1, Math.min(Number(maxFiles) || 3, 3));
-
-    // Only allow requests from this app's own window
-    const senderWindow = BrowserWindow.fromWebContents(event.sender);
-    if (!senderWindow) {
-        throw new Error('Invalid desktop window');
-    }
-
-    const result = await dialog.showOpenDialog(senderWindow, {
-        title: 'Select complaint evidence',
-        buttonLabel: 'Choose Photos',
-        properties: ['openFile', 'multiSelections'],
-        filters: [
-            {
-                name: 'Images',
-                extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif']
-            }
-        ]
-    });
-
-    if (result.canceled || result.filePaths.length === 0) {
-        return [];
-    }
-
-    const selectedPaths = result.filePaths.slice(0, safeMax);
-
-    const images = await Promise.all(
-        selectedPaths.map(async (filePath) => {
-            const buffer = await fs.readFile(filePath);
-            const extension = path.extname(filePath).toLowerCase();
-
-            const mimeTypes = {
-                '.jpg': 'image/jpeg',
-                '.jpeg': 'image/jpeg',
-                '.png': 'image/png',
-                '.webp': 'image/webp',
-                '.gif': 'image/gif'
-            };
-
-            return {
-                name: path.basename(filePath),
-                mimeType: mimeTypes[extension],
-                base64: buffer.toString('base64')
-            };
-        })
-    );
-
-    return images;
-});
+// Register modular IPC handlers
+registerIpcHandlers();
 
 function createWindow() {
     const mainWindow = new BrowserWindow({
