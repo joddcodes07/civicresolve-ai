@@ -1,5 +1,5 @@
-import { lazy, Suspense } from 'react'
-import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { CitizenLayout } from './components/layout/CitizenLayout.jsx'
 import { ConsoleShell } from './components/layout/ConsoleShell.jsx'
 import { useAuth } from './lib/auth.jsx'
@@ -52,6 +52,18 @@ function RequireAuth() {
 }
 
 export function App() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!window.desktop?.onNavigate) return
+    const unsubscribe = window.desktop.onNavigate((targetPath) => {
+      if (typeof targetPath === 'string' && targetPath.startsWith('/')) {
+        navigate(targetPath)
+      }
+    })
+    return unsubscribe
+  }, [navigate])
+
   return (
     <Suspense fallback={<PageLoader fullScreen />}>
       <Routes>

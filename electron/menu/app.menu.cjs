@@ -8,6 +8,12 @@ const { app, Menu, shell } = require('electron');
 function setupApplicationMenu(isDev = false) {
   const isMac = process.platform === 'darwin';
 
+  const sendNavigation = (targetPath) => (item, focusedWindow) => {
+    if (focusedWindow && !focusedWindow.isDestroyed()) {
+      focusedWindow.webContents.send('desktop:navigate', targetPath);
+    }
+  };
+
   const template = [
     ...(isMac
       ? [
@@ -15,6 +21,12 @@ function setupApplicationMenu(isDev = false) {
             label: app.name,
             submenu: [
               { role: 'about' },
+              { type: 'separator' },
+              {
+                label: 'Preferences…',
+                accelerator: 'CmdOrCtrl+,',
+                click: sendNavigation('/admin/settings')
+              },
               { type: 'separator' },
               { role: 'services' },
               { type: 'separator' },
@@ -30,6 +42,16 @@ function setupApplicationMenu(isDev = false) {
     {
       label: 'File',
       submenu: [
+        ...(!isMac
+          ? [
+              {
+                label: 'Preferences…',
+                accelerator: 'CmdOrCtrl+,',
+                click: sendNavigation('/admin/settings')
+              },
+              { type: 'separator' }
+            ]
+          : []),
         isMac ? { role: 'close' } : { role: 'quit' }
       ]
     },
@@ -61,6 +83,47 @@ function setupApplicationMenu(isDev = false) {
               { type: 'separator' },
               { role: 'selectAll' }
             ])
+      ]
+    },
+    {
+      label: 'Navigate',
+      submenu: [
+        {
+          label: 'Citizen Home',
+          accelerator: 'CmdOrCtrl+1',
+          click: sendNavigation('/')
+        },
+        {
+          label: 'Lodge Grievance',
+          accelerator: 'CmdOrCtrl+2',
+          click: sendNavigation('/lodge')
+        },
+        {
+          label: 'Track Complaints',
+          accelerator: 'CmdOrCtrl+3',
+          click: sendNavigation('/track')
+        },
+        {
+          label: 'Public Map',
+          accelerator: 'CmdOrCtrl+4',
+          click: sendNavigation('/map')
+        },
+        {
+          label: 'Chat Assistant',
+          accelerator: 'CmdOrCtrl+5',
+          click: sendNavigation('/chat')
+        },
+        { type: 'separator' },
+        {
+          label: 'Officer Queue',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          click: sendNavigation('/officer')
+        },
+        {
+          label: 'Admin Overview',
+          accelerator: 'CmdOrCtrl+Shift+A',
+          click: sendNavigation('/admin')
+        }
       ]
     },
     {

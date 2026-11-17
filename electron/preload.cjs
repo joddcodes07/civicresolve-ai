@@ -20,5 +20,12 @@ contextBridge.exposeInMainWorld('desktop', {
         ipcRenderer.invoke('desktop:show-notification', options),
 
     isNotificationSupported: () =>
-        ipcRenderer.invoke('desktop:is-notification-supported')
+        ipcRenderer.invoke('desktop:is-notification-supported'),
+
+    onNavigate: (callback) => {
+        if (typeof callback !== 'function') return () => { };
+        const handler = (_event, targetPath) => callback(targetPath);
+        ipcRenderer.on('desktop:navigate', handler);
+        return () => ipcRenderer.removeListener('desktop:navigate', handler);
+    }
 });
