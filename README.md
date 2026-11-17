@@ -103,7 +103,34 @@ The sign-in page has **one-click demo buttons** for each role.
 | `npm run db:seed` | Re-seed the demo city (idempotent) |
 | `npm run db:down` | Stop the project-local Postgres |
 | `npm test` | Unit tests for the seven formulas + the classifier |
+| `npm --workspace server run test:db` | Database constraint tests (requires `RUN_DB_TESTS=true` and an isolated `_test`/`_dhruv` database) |
+| `npm --workspace server run db:validate` | Read-only 3NF and data-integrity validation against `DATABASE_URL` |
 | `npm run build` | Production build of the web app |
+
+---
+
+## Database model (3NF)
+
+The PostgreSQL schema is normalized to Third Normal Form. The one genuine First Normal Form violation — a
+multi-valued `keywords TEXT[]` column on `Category` — was replaced by an atomic child relation:
+
+```prisma
+model CategoryKeyword {
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  keyword    String
+
+  @@id([categoryId, keyword])
+  @@index([keyword])
+}
+```
+
+`StatusHistory.fromStatus` and `toStatus` are constrained to the `ComplaintStatus` enum instead of free text.
+Historical snapshots such as `Complaint.slaHours`, `Message.senderName`, and the materialized `Issue.reportCount`
+are intentional and documented in the database analysis; they are not live copies of another row's data.
+
+Run `npm --workspace server run db:validate` after a migration to check the composite key, enum domains, keyword
+atomicity/uniqueness, referential integrity, and the 277-keyword reference volume.
 
 ---
 
@@ -151,8 +178,8 @@ those reasons.
 ASDGrpProj/
 ├── scripts/db.sh              # project-local Postgres cluster (port 5433)
 ├── server/
-│   ├── prisma/schema.prisma   # 13 models: users, departments, categories, wards, issues,
-│   │                          # complaints, status history, transfers, messages, feedback…
+│   ├── prisma/schema.prisma   # 16 models: users, departments, categories, category keywords,
+│   │                          # wards, issues, complaints, status history, transfers, messages…
 │   ├── prisma/seed.js         # 14 depts · 27 categories · 12 wards · 20 users · 67 complaints
 │   └── src/
 │       ├── index.js           # express + socket.io + static uploads + error handling

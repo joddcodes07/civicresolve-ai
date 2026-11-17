@@ -34,6 +34,8 @@ jobs:
       - run: npm --workspace server run prisma:generate
       - run: npm --workspace server run prisma:deploy
       - run: npm --workspace server run data:import
+      - run: npm --workspace server run db:validate
       - run: npm test
+      - run: RUN_DB_TESTS=true npm --workspace server run test:db
       - run: RUN_INTEGRATION=true npm --workspace server run test:integration
       - run: npm run build

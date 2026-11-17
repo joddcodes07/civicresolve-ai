@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 const here = path.dirname(fileURLToPath(import.meta.url))
 // server/.env is the source of truth for this project, so it overrides any
 // ambient shell variables (e.g. a global NODE_ENV=production).
-loadEnv({ path: path.resolve(here, '../.env'), quiet: true, override: false })
+loadEnv({ path: path.resolve(here, '../.env'), quiet: true, override: true })
 
 const bool = (v, fallback = false) => {
   if (v === undefined || v === null || v === '') return fallback

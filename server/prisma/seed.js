@@ -141,7 +141,7 @@ async function main() {
           name: c.name,
           defaultSeverity: c.defaultSeverity,
           dupRadiusMetres: c.dupRadiusMetres,
-          keywords: c.keywords,
+          keywords: { create: c.keywords.map((keyword) => ({ keyword })) },
           departmentId: dept.id,
         },
       }),

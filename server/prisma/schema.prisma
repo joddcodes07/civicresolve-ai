@@ -99,14 +99,23 @@ model Category {
   name            String @unique
   subType         String?
   defaultSeverity Int    @default(3)
-  keywords        String[] @default([])
   dupRadiusMetres Int    @default(50)
 
   departmentId String
   department   Department @relation(fields: [departmentId], references: [id])
 
+  keywords   CategoryKeyword[]
   complaints Complaint[]
   issues     Issue[]
+}
+
+model CategoryKeyword {
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  keyword    String
+
+  @@id([categoryId, keyword])
+  @@index([keyword])
 }
 
 model Ward {
@@ -214,8 +223,8 @@ model StatusHistory {
   id          String   @id @default(cuid())
   complaintId String
   complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
-  fromStatus  String?
-  toStatus    String
+  fromStatus  ComplaintStatus?
+  toStatus    ComplaintStatus
   note        String?
   photoUrl    String?
   changedById String?
