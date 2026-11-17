@@ -3,6 +3,7 @@ const path = require('path');
 const { registerIpcHandlers } = require('./ipc/index.cjs');
 const { configureSecurityHandlers } = require('./utils/security.cjs');
 const { setupApplicationMenu } = require('./menu/app.menu.cjs');
+const { loadWindowState, trackWindowState } = require('./services/window-state.service.cjs');
 
 // Configure application metadata
 app.setName('CivicResolve AI');
@@ -32,11 +33,15 @@ if (!gotTheLock) {
     registerIpcHandlers();
 
     function createWindow() {
+        const windowState = loadWindowState();
+
         mainWindow = new BrowserWindow({
-            width: 1280,
-            height: 850,
-            minWidth: 1000,
-            minHeight: 650,
+            width: windowState.width,
+            height: windowState.height,
+            minWidth: windowState.minWidth,
+            minHeight: windowState.minHeight,
+            x: windowState.x,
+            y: windowState.y,
             title: 'CivicResolve AI',
             backgroundColor: '#0f172a',
 
@@ -49,6 +54,12 @@ if (!gotTheLock) {
                 allowRunningInsecureContent: false
             }
         });
+
+        if (windowState.isMaximized) {
+            mainWindow.maximize();
+        }
+
+        trackWindowState(mainWindow);
 
         // Enforce origin, navigation, and window open security guards
         configureSecurityHandlers(mainWindow);
