@@ -3,6 +3,7 @@ const path = require('path');
 const { registerIpcHandlers } = require('./ipc/index.cjs');
 const { configureSecurityHandlers } = require('./utils/security.cjs');
 const { setupApplicationMenu } = require('./menu/app.menu.cjs');
+const { showContextMenu } = require('./menu/context.menu.cjs');
 const { loadWindowState, trackWindowState } = require('./services/window-state.service.cjs');
 const { dispatchDeepLink } = require('./services/deep-link.service.cjs');
 
@@ -78,6 +79,11 @@ if (!gotTheLock) {
 
         // Enforce origin, navigation, and window open security guards
         configureSecurityHandlers(mainWindow);
+
+        // Attach native contextual right-click menu
+        mainWindow.webContents.on('context-menu', (event, params) => {
+            showContextMenu(mainWindow, params, isDev);
+        });
 
         // Monitor renderer crash and unresponsiveness
         mainWindow.webContents.on('render-process-gone', (event, details) => {
