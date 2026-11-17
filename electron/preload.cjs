@@ -27,5 +27,17 @@ contextBridge.exposeInMainWorld('desktop', {
         const handler = (_event, targetPath) => callback(targetPath);
         ipcRenderer.on('desktop:navigate', handler);
         return () => ipcRenderer.removeListener('desktop:navigate', handler);
+    },
+
+    getTheme: () => ipcRenderer.invoke('desktop:get-theme'),
+
+    setThemeSource: (source) =>
+        ipcRenderer.invoke('desktop:set-theme-source', source),
+
+    onThemeChanged: (callback) => {
+        if (typeof callback !== 'function') return () => { };
+        const handler = (_event, themeInfo) => callback(themeInfo);
+        ipcRenderer.on('desktop:theme-changed', handler);
+        return () => ipcRenderer.removeListener('desktop:theme-changed', handler);
     }
 });

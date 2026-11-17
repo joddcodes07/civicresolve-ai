@@ -1,4 +1,4 @@
-const { app, Menu, shell } = require('electron');
+const { app, Menu, shell, nativeTheme } = require('electron');
 
 /**
  * Builds and sets the native operating system application menu.
@@ -136,6 +136,36 @@ function setupApplicationMenu(isDev = false) {
         { role: 'resetZoom' },
         { role: 'zoomIn' },
         { role: 'zoomOut' },
+        { type: 'separator' },
+        {
+          label: 'Theme',
+          submenu: [
+            {
+              label: 'System Default',
+              type: 'radio',
+              checked: nativeTheme.themeSource === 'system',
+              click: () => {
+                nativeTheme.themeSource = 'system';
+              }
+            },
+            {
+              label: 'Light Theme',
+              type: 'radio',
+              checked: nativeTheme.themeSource === 'light',
+              click: () => {
+                nativeTheme.themeSource = 'light';
+              }
+            },
+            {
+              label: 'Dark Theme',
+              type: 'radio',
+              checked: nativeTheme.themeSource === 'dark',
+              click: () => {
+                nativeTheme.themeSource = 'dark';
+              }
+            }
+          ]
+        },
         { type: 'separator' },
         { role: 'togglefullscreen' }
       ]

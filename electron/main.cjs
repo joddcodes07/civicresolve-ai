@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, nativeTheme } = require('electron');
 const path = require('path');
 const { registerIpcHandlers } = require('./ipc/index.cjs');
 const { configureSecurityHandlers } = require('./utils/security.cjs');
@@ -48,6 +48,8 @@ if (!gotTheLock) {
     function createWindow() {
         const windowState = loadWindowState();
 
+        const isDark = nativeTheme.shouldUseDarkColors;
+
         mainWindow = new BrowserWindow({
             width: windowState.width,
             height: windowState.height,
@@ -56,7 +58,7 @@ if (!gotTheLock) {
             x: windowState.x,
             y: windowState.y,
             title: 'CivicResolve AI',
-            backgroundColor: '#0f172a',
+            backgroundColor: isDark ? '#0f172a' : '#f4f2ec',
 
             webPreferences: {
                 preload: path.join(__dirname, 'preload.cjs'),
