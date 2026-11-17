@@ -1,0 +1,76 @@
+# electron-builder.yml
+# Packaging & distribution configuration for CivicResolve AI desktop app.
+# Used by `npx electron-builder` / the `desktop:build` npm script.
+#
+# Milestone 16 adds the `publish` section so that electron-updater can
+# locate GitHub Releases and check for updates automatically.
+
+appId: com.civicresolve.ai
+productName: CivicResolve AI
+copyright: "Copyright © 2024 CivicResolve AI"
+
+# Source files to include in the package
+files:
+  - "electron/**/*"
+  - "client/dist/**/*"
+  - "package.json"
+
+# Built React frontend must be present before packaging
+# Run `npm run build` first, then `npx electron-builder`
+
+# ── macOS ──────────────────────────────────────────────────────────────────────
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+  # Hardened runtime is required for notarisation and auto-updates on macOS
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+dmg:
+  sign: false   # set to true when a valid Apple Developer certificate is configured
+
+# ── Windows ────────────────────────────────────────────────────────────────────
+win:
+  target:
+    - target: nsis
+      arch: [x64, ia32]
+  # Signing requires a valid code-signing certificate; leave commented until ready
+  # certificateFile: build/windows-cert.pfx
+  # certificatePassword: ${env.WINDOWS_CERT_PASSWORD}
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+# ── Linux ──────────────────────────────────────────────────────────────────────
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  category: Office
+
+# ── Auto-updater publisher (Milestone 16) ─────────────────────────────────────
+# electron-updater reads this section to know where to fetch update manifests.
+# GitHub Releases are free, public, and directly supported by electron-updater.
+# To publish a release: `npx electron-builder --publish always`
+publish:
+  - provider: github
+    owner: joddcodes07
+    repo: civicresolve-ai
+    # releaseType defaults to "draft" so accidental publishes don't go live
+    releaseType: draft
+
+# ── Output directory ──────────────────────────────────────────────────────────
+directories:
+  output: dist-electron
+  buildResources: build

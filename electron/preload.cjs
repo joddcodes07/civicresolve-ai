@@ -39,5 +39,41 @@ contextBridge.exposeInMainWorld('desktop', {
         const handler = (_event, themeInfo) => callback(themeInfo);
         ipcRenderer.on('desktop:theme-changed', handler);
         return () => ipcRenderer.removeListener('desktop:theme-changed', handler);
+    },
+
+    // ── Auto-updater (Milestone 16) ──────────────────────────────────────────
+
+    /**
+     * Manually trigger an update check.
+     * Results arrive asynchronously via onUpdateStatus().
+     * @returns {Promise<{triggered: boolean}>}
+     */
+    checkForUpdate: () => ipcRenderer.invoke('desktop:check-for-update'),
+
+    /**
+     * Quit and install a previously downloaded update.
+     * Only call this after receiving status === 'ready' from onUpdateStatus().
+     * @returns {Promise<{installing: boolean}>}
+     */
+    installUpdate: () => ipcRenderer.invoke('desktop:install-update'),
+
+    /**
+     * Subscribe to update-status push events from the main process.
+     * @param {(payload: UpdateStatusPayload) => void} callback
+     * @returns {() => void}  unsubscribe function
+     *
+     * UpdateStatusPayload shapes:
+     *   { status: 'checking' }
+     *   { status: 'available',     version, releaseDate, releaseNotes }
+     *   { status: 'not-available', version }
+     *   { status: 'downloading',   percent, transferred, total, bytesPerSecond }
+     *   { status: 'ready',         version, releaseDate }
+     *   { status: 'error',         message }
+     */
+    onUpdateStatus: (callback) => {
+        if (typeof callback !== 'function') return () => { };
+        const handler = (_event, payload) => callback(payload);
+        ipcRenderer.on('desktop:update-status', handler);
+        return () => ipcRenderer.removeListener('desktop:update-status', handler);
     }
 });

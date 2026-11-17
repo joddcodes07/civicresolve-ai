@@ -6,6 +6,7 @@ const { setupApplicationMenu } = require('./menu/app.menu.cjs');
 const { showContextMenu } = require('./menu/context.menu.cjs');
 const { loadWindowState, trackWindowState } = require('./services/window-state.service.cjs');
 const { dispatchDeepLink } = require('./services/deep-link.service.cjs');
+const { initUpdater } = require('./services/updater.service.cjs');
 
 // Configure application metadata
 app.setName('CivicResolve AI');
@@ -98,12 +99,17 @@ if (!gotTheLock) {
             mainWindow = null;
         });
 
-        // Flush any pending deep link navigation once renderer finishes loading
+        // Flush any pending deep link navigation once renderer finishes loading.
+        // Also initialise the auto-updater so it has a valid mainWindow reference
+        // and the renderer is ready to receive push events.
         mainWindow.webContents.on('did-finish-load', () => {
             if (appState.pendingDeepLink) {
                 mainWindow.webContents.send('desktop:navigate', appState.pendingDeepLink);
                 appState.pendingDeepLink = null;
             }
+
+            // Initialise auto-updater once per window lifetime (no-op in dev).
+            initUpdater(mainWindow);
         });
 
         if (isDev) {
