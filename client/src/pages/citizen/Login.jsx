@@ -27,12 +27,40 @@ export default function Login() {
   const [stats, setStats] = useState(null)
   const [googleEnabled, setGoogleEnabled] = useState(false)
   const [googleError, setGoogleError] = useState('')
+  const [googleStatusError, setGoogleStatusError] = useState('')
+  const [googleStatusAttempt, setGoogleStatusAttempt] = useState(0)
   const googleHandled = useRef(false)
   const from = location.state?.from || null
   const isLogin = mode === 'login'
 
   useEffect(() => {
-    api.get('/api/auth/google/status').then(({ enabled }) => setGoogleEnabled(enabled)).catch(() => { })
+    // OAuth cookies, start, callback, and exchange all use this website's
+    // same-origin proxy, even when the other API calls use VITE_API_URL.
+    let active = true
+    setGoogleStatusError('')
+    setGoogleEnabled(false)
+    fetch('/api/auth/google/status', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10000),
+    })
+      .then(async response => {
+        if (!response.ok) throw new Error('Google sign-in could not be checked. Please retry.')
+        const status = await response.json()
+        if (typeof status.enabled !== 'boolean') throw new Error('Google sign-in could not be checked. Please retry.')
+        if (!active) return
+        setGoogleEnabled(status.enabled)
+        if (!status.enabled) setGoogleStatusError('Google sign-in is temporarily unavailable.')
+      })
+      .catch(error => {
+        if (active) setGoogleStatusError(error.name === 'TimeoutError'
+          ? 'The sign-in service is taking too long. Please retry.'
+          : 'Google sign-in could not be checked. Please retry.')
+      })
+    return () => { active = false }
+  }, [googleStatusAttempt])
+
+  useEffect(() => {
     api.get('/api/meta/stats').then(d => setStats(d.stats)).catch(() => { })
     api.get('/api/auth/demo-accounts').then((d) => setDemo(d.accounts || [])).catch(() => { })
   }, [])
@@ -177,8 +205,7 @@ export default function Login() {
               </button>
             </form>
 
-            {googleEnabled && (
-              <>
+            <>
                 <div className="my-4 flex items-center gap-3 text-xs text-ink-soft">
                   <span className="h-px flex-1 bg-line" />
                   <span>{t('login.or')}</span>
@@ -188,14 +215,17 @@ export default function Login() {
                   type="button"
                   aria-label={t('login.google')}
                   title={t('login.google')}
-                  disabled={busy}
+                  disabled={busy || !googleEnabled}
                   onClick={() => window.location.assign('/api/auth/google/start')}
                   className="mx-auto grid size-12 place-items-center rounded-full border border-line-strong bg-white transition-colors hover:border-ink hover:bg-paper disabled:opacity-50"
                 >
                   <img src="/google-g.png" alt="" width="20" height="20" />
                 </button>
-              </>
-            )}
+            </>
+            {googleStatusError && <div role="status" className="mt-3 text-sm text-ink-soft">
+              <p>{googleStatusError}</p>
+              <button type="button" className="mt-1 underline" onClick={() => setGoogleStatusAttempt(attempt => attempt + 1)}>Retry Google sign-in</button>
+            </div>}
             {googleError && <p role="alert" className="mt-3 text-sm text-red">{googleError}</p>}
           </section>
 
