@@ -34,6 +34,19 @@ test('backend integration against isolated PostgreSQL', { skip: process.env.RUN_
     const location = { lat: 18.5204, lng: 73.8567 }
     const text = `${tag} There is a deep pothole on the road outside our house.`
     let complaint
+    await t.test('Google sign-in rejects a different frontend origin before setting cookies', async () => {
+      const origin = new URL(env.clientOrigin).origin
+      const status = await request('/api/auth/google/status')
+      assert.equal(status.body.origin, origin)
+      const rejected = await fetch(base + '/api/auth/google/start?origin=' + encodeURIComponent('https://other-civicresolve.example.test'), { redirect: 'manual' })
+      assert.equal(rejected.status, 409)
+      assert.equal(rejected.headers.get('location'), null)
+      assert.equal(rejected.headers.getSetCookie().length, 0)
+      const accepted = await fetch(base + '/api/auth/google/start?origin=' + encodeURIComponent(origin), { redirect: 'manual' })
+      assert.equal(accepted.status, 302)
+      const authorize = new URL(accepted.headers.get('location'))
+      assert.equal(authorize.searchParams.get('redirect_uri'), origin + '/api/auth/google/callback')
+    })
     await t.test('Google sign-in binds the callback to the browser, preserves password accounts and consumes tickets once', async () => {
       const { OAuth2Client } = await import('google-auth-library')
       const google = t.mock.method(OAuth2Client.prototype, 'getToken', async () => ({ tokens: { id_token: 'test-id-token' } }))

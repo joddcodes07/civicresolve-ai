@@ -49,6 +49,10 @@ export default function Login() {
         const status = await response.json()
         if (typeof status.enabled !== 'boolean') throw new Error('Google sign-in could not be checked. Please retry.')
         if (!active) return
+        if (status.origin && status.origin !== window.location.origin) {
+          setGoogleStatusError('Google sign-in is linked to a different website. Please contact the project administrator.')
+          return
+        }
         setGoogleEnabled(status.enabled)
         if (!status.enabled) setGoogleStatusError('Google sign-in is temporarily unavailable.')
       })
@@ -216,7 +220,7 @@ export default function Login() {
                   aria-label={t('login.google')}
                   title={t('login.google')}
                   disabled={busy || !googleEnabled}
-                  onClick={() => window.location.assign('/api/auth/google/start')}
+                  onClick={() => window.location.assign('/api/auth/google/start?origin=' + encodeURIComponent(window.location.origin))}
                   className="mx-auto grid size-12 place-items-center rounded-full border border-line-strong bg-white transition-colors hover:border-ink hover:bg-paper disabled:opacity-50"
                 >
                   <img src="/google-g.png" alt="" width="20" height="20" />
