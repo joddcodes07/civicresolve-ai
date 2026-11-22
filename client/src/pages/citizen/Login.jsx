@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useI18n } from '../../lib/i18n.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { api } from '../../lib/api.js'
+import { checkGoogleSignIn } from '../../lib/googleSignIn.js'
 import { Field, Input } from '../../components/ui/Field.jsx'
 import { LogoMark } from '../../components/layout/Logo.jsx'
 import { Spinner } from '../../components/ui/Primitives.jsx'
@@ -28,6 +29,7 @@ export default function Login() {
   const [googleEnabled, setGoogleEnabled] = useState(false)
   const [googleError, setGoogleError] = useState('')
   const [googleStatusError, setGoogleStatusError] = useState('')
+  const [googleConnecting, setGoogleConnecting] = useState(true)
   const [googleStatusAttempt, setGoogleStatusAttempt] = useState(0)
   const googleHandled = useRef(false)
   const from = location.state?.from || null
@@ -37,17 +39,12 @@ export default function Login() {
     // OAuth cookies, start, callback, and exchange all use this website's
     // same-origin proxy, even when the other API calls use VITE_API_URL.
     let active = true
+    const controller = new AbortController()
+    setGoogleConnecting(true)
     setGoogleStatusError('')
     setGoogleEnabled(false)
-    fetch('/api/auth/google/status', {
-      credentials: 'same-origin',
-      cache: 'no-store',
-      signal: AbortSignal.timeout(10000),
-    })
-      .then(async response => {
-        if (!response.ok) throw new Error('Google sign-in could not be checked. Please retry.')
-        const status = await response.json()
-        if (typeof status.enabled !== 'boolean') throw new Error('Google sign-in could not be checked. Please retry.')
+    checkGoogleSignIn({ signal: controller.signal })
+      .then(status => {
         if (!active) return
         if (status.origin && status.origin !== window.location.origin) {
           setGoogleStatusError('Google sign-in is linked to a different website. Please contact the project administrator.')
@@ -61,13 +58,14 @@ export default function Login() {
           ? 'The sign-in service is taking too long. Please retry.'
           : 'Google sign-in could not be checked. Please retry.')
       })
-    return () => { active = false }
+      .finally(() => { if (active) setGoogleConnecting(false) })
+    return () => { active = false; controller.abort() }
   }, [googleStatusAttempt])
 
   useEffect(() => {
     api.get('/api/meta/stats').then(d => setStats(d.stats)).catch(() => { })
     api.get('/api/auth/demo-accounts').then((d) => setDemo(d.accounts || [])).catch(() => { })
-  }, [])
+  }, [googleEnabled])
 
   useEffect(() => {
     if (user) navigate(from || (user.role === 'ADMIN' ? '/admin' : user.role === 'OFFICER' ? '/officer' : '/'), { replace: true })
@@ -226,6 +224,7 @@ export default function Login() {
                   <img src="/google-g.png" alt="" width="20" height="20" />
                 </button>
             </>
+            {googleConnecting && <p role="status" className="mt-3 text-center text-sm text-ink-soft">Connecting to the sign-in service… This may take a minute.</p>}
             {googleStatusError && <div role="status" className="mt-3 text-sm text-ink-soft">
               <p>{googleStatusError}</p>
               <button type="button" className="mt-1 underline" onClick={() => setGoogleStatusAttempt(attempt => attempt + 1)}>Retry Google sign-in</button>
