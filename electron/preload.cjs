@@ -308,5 +308,45 @@ contextBridge.exposeInMainWorld('desktop', {
             ipcRenderer.on('desktop:shortcut-triggered', handler);
             return () => ipcRenderer.removeListener('desktop:shortcut-triggered', handler);
         }
+    },
+
+    // ── Multi-Window & Secondary Windows (Milestone 26) ──────────────────────
+
+    windows: {
+        /**
+         * Opens or focuses a secondary application window.
+         * @param {object} options
+         * @param {string} options.id Unique identifier (e.g. 'detached-map')
+         * @param {string} [options.route] Route to navigate to
+         * @param {string} [options.title] Window title
+         * @param {number} [options.width] Window width
+         * @param {number} [options.height] Window height
+         * @returns {Promise<{ id: string, action: 'focused' | 'opened' }>}
+         */
+        open: (options = {}) =>
+            ipcRenderer.invoke('desktop:window:open', options),
+
+        /**
+         * Closes a secondary window by id.
+         * @param {string} id
+         * @returns {Promise<{ id: string, closed: boolean }>}
+         */
+        close: (id) =>
+            ipcRenderer.invoke('desktop:window:close', id),
+
+        /**
+         * Brings an open secondary window to the front.
+         * @param {string} id
+         * @returns {Promise<{ id: string, focused: boolean }>}
+         */
+        focus: (id) =>
+            ipcRenderer.invoke('desktop:window:focus', id),
+
+        /**
+         * Lists all open secondary windows.
+         * @returns {Promise<Array<{ id: string, title: string, isVisible: boolean }>>}
+         */
+        list: () =>
+            ipcRenderer.invoke('desktop:window:list')
     }
 });

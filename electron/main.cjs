@@ -13,6 +13,7 @@ const { configureSessionCache } = require('./services/performance.service.cjs');
 const { createTray, destroyTray } = require('./services/tray.service.cjs');
 const { clearAttention } = require('./services/badge.service.cjs');
 const { registerGlobalShortcuts, unregisterGlobalShortcuts } = require('./services/global-shortcut.service.cjs');
+const { closeAllSecondaryWindows } = require('./services/window-manager.service.cjs');
 
 // Configure application metadata
 app.setName('CivicResolve AI');
@@ -180,6 +181,7 @@ if (!gotTheLock) {
 
     app.on('before-quit', () => {
         app.isQuitting = true;
+        closeAllSecondaryWindows();
         unregisterGlobalShortcuts();
         destroyTray();
     });
