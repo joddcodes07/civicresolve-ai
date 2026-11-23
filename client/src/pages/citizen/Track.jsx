@@ -95,6 +95,7 @@ export default function Track() {
               body: `Status: ${payload.statusLabel || 'Updated'}`
             })
             .catch(() => {})
+          window.desktop.requestAttention?.(false)
         }
       }
     },

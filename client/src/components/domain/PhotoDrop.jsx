@@ -25,15 +25,19 @@ export function PhotoDrop({
 
     try {
       const compressed = []
+      let processed = 0
 
       for (const file of incoming) {
         compressed.push(await compressImage(file))
+        processed += 1
+        window.desktop?.setProgressBar?.(processed / incoming.length)
       }
 
       onChange([...files, ...compressed].slice(0, max))
     } catch (error) {
       console.error('Unable to process selected images:', error)
     } finally {
+      window.desktop?.setProgressBar?.(-1)
       setBusy(false)
     }
   }

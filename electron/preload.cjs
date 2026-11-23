@@ -173,5 +173,39 @@ contextBridge.exposeInMainWorld('desktop', {
      * @returns {Promise<{ success: boolean }>}
      */
     setTrayBadge: (hasAlert) =>
-        ipcRenderer.invoke('desktop:set-tray-badge', hasAlert)
+        ipcRenderer.invoke('desktop:set-tray-badge', hasAlert),
+
+    // ── Badging & Taskbar Alerts (Milestone 22) ──────────────────────────────
+
+    /**
+     * Sets numeric badge count on macOS dock or Windows/Linux taskbar.
+     * @param {number} count Non-negative integer (0 clears badge)
+     * @returns {Promise<{ success: boolean, count: number }>}
+     */
+    setBadgeCount: (count) =>
+        ipcRenderer.invoke('desktop:set-badge-count', count),
+
+    /**
+     * Requests user attention (dock bounce on macOS, taskbar flash on Windows/Linux).
+     * @param {boolean} [critical=false]
+     * @returns {Promise<{ success: boolean }>}
+     */
+    requestAttention: (critical = false) =>
+        ipcRenderer.invoke('desktop:request-attention', critical),
+
+    /**
+     * Manually clears attention / taskbar flashing.
+     * @returns {Promise<{ success: boolean }>}
+     */
+    clearAttention: () =>
+        ipcRenderer.invoke('desktop:clear-attention'),
+
+    /**
+     * Sets progress bar on dock icon or taskbar button.
+     * @param {number} progress 0.0 to 1.0 (-1 to clear)
+     * @param {{ mode?: 'none'|'normal'|'indeterminate'|'error'|'paused' }} [options]
+     * @returns {Promise<{ success: boolean }>}
+     */
+    setProgressBar: (progress, options = {}) =>
+        ipcRenderer.invoke('desktop:set-progress-bar', progress, options)
 });

@@ -11,6 +11,7 @@ const { initCrashReporter, attachWindowCrashHandlers } = require('./services/cra
 const { initOfflineMonitor } = require('./services/offline-monitor.service.cjs');
 const { configureSessionCache } = require('./services/performance.service.cjs');
 const { createTray, destroyTray } = require('./services/tray.service.cjs');
+const { clearAttention } = require('./services/badge.service.cjs');
 
 // Configure application metadata
 app.setName('CivicResolve AI');
@@ -94,6 +95,11 @@ if (!gotTheLock) {
 
         // Monitor renderer crash and unresponsiveness (Milestone 18: via crash reporter)
         attachWindowCrashHandlers(mainWindow);
+
+        // Clear taskbar attention/flashing when window gains focus
+        mainWindow.on('focus', () => {
+            clearAttention(mainWindow);
+        });
 
         // Hide to tray instead of quitting when user closes the window
         mainWindow.on('close', (event) => {
