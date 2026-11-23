@@ -132,5 +132,28 @@ contextBridge.exposeInMainWorld('desktop', {
         const handler = (_event, state) => callback(state);
         ipcRenderer.on('desktop:connectivity-changed', handler);
         return () => ipcRenderer.removeListener('desktop:connectivity-changed', handler);
-    }
+    },
+
+    // ── Performance & Cache Diagnostics (Milestone 20) ───────────────────────
+
+    /**
+     * Inspects application cache size on disk.
+     * @returns {Promise<{ cacheSizeBytes: number, cacheSizeMB: number }>}
+     */
+    getCacheStats: () =>
+        ipcRenderer.invoke('desktop:get-cache-stats'),
+
+    /**
+     * Clears non-credential disk and memory cache.
+     * @returns {Promise<{ cleared: boolean }>}
+     */
+    clearCache: () =>
+        ipcRenderer.invoke('desktop:clear-cache'),
+
+    /**
+     * Returns system process and memory usage diagnostics.
+     * @returns {Promise<object>}
+     */
+    getMemoryMetrics: () =>
+        ipcRenderer.invoke('desktop:get-memory-metrics')
 });

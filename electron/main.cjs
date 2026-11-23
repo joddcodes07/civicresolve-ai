@@ -9,6 +9,7 @@ const { dispatchDeepLink } = require('./services/deep-link.service.cjs');
 const { initUpdater } = require('./services/updater.service.cjs');
 const { initCrashReporter, attachWindowCrashHandlers } = require('./services/crash-reporter.service.cjs');
 const { initOfflineMonitor } = require('./services/offline-monitor.service.cjs');
+const { configureSessionCache } = require('./services/performance.service.cjs');
 
 // Configure application metadata
 app.setName('CivicResolve AI');
@@ -60,6 +61,7 @@ if (!gotTheLock) {
             y: windowState.y,
             title: 'CivicResolve AI',
             backgroundColor: isDark ? '#0f172a' : '#f4f2ec',
+            show: false,
 
             webPreferences: {
                 preload: path.join(__dirname, 'preload.cjs'),
@@ -71,9 +73,13 @@ if (!gotTheLock) {
             }
         });
 
-        if (windowState.isMaximized) {
-            mainWindow.maximize();
-        }
+        // Smooth window display without white/blank flash
+        mainWindow.once('ready-to-show', () => {
+            if (windowState.isMaximized) {
+                mainWindow.maximize();
+            }
+            mainWindow.show();
+        });
 
         trackWindowState(mainWindow);
 
@@ -138,6 +144,7 @@ if (!gotTheLock) {
     });
 
     app.whenReady().then(() => {
+        configureSessionCache();
         setupApplicationMenu(isDev);
         createWindow();
 
