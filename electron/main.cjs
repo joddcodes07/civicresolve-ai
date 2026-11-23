@@ -14,6 +14,7 @@ const { createTray, destroyTray } = require('./services/tray.service.cjs');
 const { clearAttention } = require('./services/badge.service.cjs');
 const { registerGlobalShortcuts, unregisterGlobalShortcuts } = require('./services/global-shortcut.service.cjs');
 const { closeAllSecondaryWindows } = require('./services/window-manager.service.cjs');
+const { initPowerMonitor, cleanUpPowerBlockers } = require('./services/power.service.cjs');
 
 // Configure application metadata
 app.setName('CivicResolve AI');
@@ -166,6 +167,7 @@ if (!gotTheLock) {
         createWindow();
         createTray(mainWindow);
         registerGlobalShortcuts(mainWindow);
+        initPowerMonitor(mainWindow);
 
         app.on('activate', () => {
             // On macOS re-create or restore window when dock icon is clicked
@@ -181,6 +183,7 @@ if (!gotTheLock) {
 
     app.on('before-quit', () => {
         app.isQuitting = true;
+        cleanUpPowerBlockers();
         closeAllSecondaryWindows();
         unregisterGlobalShortcuts();
         destroyTray();

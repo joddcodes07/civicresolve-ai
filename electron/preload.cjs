@@ -348,5 +348,59 @@ contextBridge.exposeInMainWorld('desktop', {
          */
         list: () =>
             ipcRenderer.invoke('desktop:window:list')
+    },
+
+    // ── Power & Idle State Management (Milestone 27) ─────────────────────────
+
+    power: {
+        /**
+         * Returns current system idle duration in seconds.
+         * @returns {Promise<number>}
+         */
+        getIdleTime: () =>
+            ipcRenderer.invoke('desktop:power:get-idle-time'),
+
+        /**
+         * Returns system idle status ('active' | 'idle' | 'locked' | 'unknown').
+         * @param {number} [thresholdSeconds=60]
+         * @returns {Promise<'active' | 'idle' | 'locked' | 'unknown'>}
+         */
+        getIdleState: (thresholdSeconds = 60) =>
+            ipcRenderer.invoke('desktop:power:get-idle-state', thresholdSeconds),
+
+        /**
+         * Returns true if device is running on battery power.
+         * @returns {Promise<boolean>}
+         */
+        isOnBattery: () =>
+            ipcRenderer.invoke('desktop:power:is-on-battery'),
+
+        /**
+         * Prevents display sleep or OS suspension during mission-critical tasks.
+         * @param {'prevent-display-sleep' | 'prevent-app-suspension'} [type='prevent-display-sleep']
+         * @returns {Promise<number | null>} Blocker ID
+         */
+        blockSleep: (type = 'prevent-display-sleep') =>
+            ipcRenderer.invoke('desktop:power:block-sleep', type),
+
+        /**
+         * Releases an active display sleep or app suspension blocker.
+         * @param {number} blockerId
+         * @returns {Promise<boolean>}
+         */
+        unblockSleep: (blockerId) =>
+            ipcRenderer.invoke('desktop:power:unblock-sleep', blockerId),
+
+        /**
+         * Subscribes to system power events (sleep, resume, lock, unlock, AC, battery).
+         * @param {(data: { event: string, timestamp: string }) => void} callback
+         * @returns {() => void}
+         */
+        onPowerStateChanged: (callback) => {
+            if (typeof callback !== 'function') return () => { };
+            const handler = (_event, data) => callback(data);
+            ipcRenderer.on('desktop:power-state-changed', handler);
+            return () => ipcRenderer.removeListener('desktop:power-state-changed', handler);
+        }
     }
 });

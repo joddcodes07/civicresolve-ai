@@ -5,6 +5,7 @@ import { ConsoleShell } from './components/layout/ConsoleShell.jsx'
 import { useAuth } from './lib/auth.jsx'
 import { PageLoader } from './components/layout/PageLoader.jsx'
 import { OfflineBanner } from './components/layout/OfflineBanner.jsx'
+import { getSocket } from './lib/socket.js'
 
 // Citizen-facing core loads eagerly (it is the first impression).
 import Home from './pages/citizen/Home.jsx'
@@ -64,6 +65,20 @@ export function App() {
     })
     return unsubscribe
   }, [navigate])
+
+  useEffect(() => {
+    if (!window.desktop?.power?.onPowerStateChanged) return
+    const unsubscribe = window.desktop.power.onPowerStateChanged(({ event }) => {
+      if (event === 'resume' || event === 'unlock-screen') {
+        try {
+          getSocket().connect()
+        } catch {
+          /* ignore */
+        }
+      }
+    })
+    return unsubscribe
+  }, [])
 
   return (
     <>
