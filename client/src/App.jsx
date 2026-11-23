@@ -4,6 +4,7 @@ import { CitizenLayout } from './components/layout/CitizenLayout.jsx'
 import { ConsoleShell } from './components/layout/ConsoleShell.jsx'
 import { useAuth } from './lib/auth.jsx'
 import { PageLoader } from './components/layout/PageLoader.jsx'
+import { OfflineBanner } from './components/layout/OfflineBanner.jsx'
 
 // Citizen-facing core loads eagerly (it is the first impression).
 import Home from './pages/citizen/Home.jsx'
@@ -65,8 +66,10 @@ export function App() {
   }, [navigate])
 
   return (
-    <Suspense fallback={<PageLoader fullScreen />}>
-      <Routes>
+    <>
+      <OfflineBanner />
+      <Suspense fallback={<PageLoader fullScreen />}>
+        <Routes>
       <Route element={<CitizenLayout />}>
         <Route index element={<Home />} />
         <Route path="lodge" element={<Lodge />} />
@@ -109,6 +112,7 @@ export function App() {
       <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
+    </>
   )
 }
 

@@ -8,6 +8,7 @@ const { loadWindowState, trackWindowState } = require('./services/window-state.s
 const { dispatchDeepLink } = require('./services/deep-link.service.cjs');
 const { initUpdater } = require('./services/updater.service.cjs');
 const { initCrashReporter, attachWindowCrashHandlers } = require('./services/crash-reporter.service.cjs');
+const { initOfflineMonitor } = require('./services/offline-monitor.service.cjs');
 
 // Configure application metadata
 app.setName('CivicResolve AI');
@@ -102,6 +103,9 @@ if (!gotTheLock) {
 
             // Initialise auto-updater once per window lifetime (no-op in dev).
             initUpdater(mainWindow);
+
+            // Start offline monitor so the renderer receives connectivity events.
+            initOfflineMonitor(mainWindow);
         });
 
         if (isDev) {

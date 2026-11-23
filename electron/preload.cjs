@@ -109,5 +109,28 @@ contextBridge.exposeInMainWorld('desktop', {
      * @returns {Promise<{captured: boolean}>}
      */
     reportRendererError: (payload = {}) =>
-        ipcRenderer.invoke('desktop:report-renderer-error', payload)
+        ipcRenderer.invoke('desktop:report-renderer-error', payload),
+
+    // ── Offline / Connectivity Monitor (Milestone 19) ────────────────────────
+
+    /**
+     * Returns the current connectivity state cached by the main-process monitor.
+     * Call once on mount to hydrate before push events arrive.
+     * @returns {Promise<{ online: boolean, since: string }>}
+     */
+    getConnectivity: () =>
+        ipcRenderer.invoke('desktop:get-connectivity'),
+
+    /**
+     * Subscribe to connectivity-change push events from the main process.
+     * Fires whenever the network transitions between online ↔ offline.
+     * @param {(state: { online: boolean, since: string }) => void} callback
+     * @returns {() => void}  unsubscribe function
+     */
+    onConnectivityChanged: (callback) => {
+        if (typeof callback !== 'function') return () => { };
+        const handler = (_event, state) => callback(state);
+        ipcRenderer.on('desktop:connectivity-changed', handler);
+        return () => ipcRenderer.removeListener('desktop:connectivity-changed', handler);
+    }
 });

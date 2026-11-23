@@ -4,6 +4,7 @@ const { registerNotificationIpc } = require('./notification.ipc.cjs');
 const { registerThemeIpc }    = require('./theme.ipc.cjs');
 const { registerUpdaterIpc }  = require('./updater.ipc.cjs');
 const { registerCrashIpc }    = require('./crash.ipc.cjs');
+const { registerOfflineIpc }  = require('./offline.ipc.cjs');
 
 function registerIpcHandlers() {
   registerAppIpc();
@@ -12,6 +13,7 @@ function registerIpcHandlers() {
   registerThemeIpc();
   registerUpdaterIpc();
   registerCrashIpc();
+  registerOfflineIpc();
 }
 
 module.exports = { registerIpcHandlers };
