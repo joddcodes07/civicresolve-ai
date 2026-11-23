@@ -10,6 +10,7 @@ const { registerTrayIpc }        = require('./tray.ipc.cjs');
 const { registerBadgeIpc }       = require('./badge.ipc.cjs');
 const { registerPrintIpc }       = require('./print.ipc.cjs');
 const { registerSafeStorageIpc } = require('./safe-storage.ipc.cjs');
+const { registerGlobalShortcutIpc } = require('./global-shortcut.ipc.cjs');
 
 function registerIpcHandlers() {
   registerAppIpc();
@@ -24,6 +25,7 @@ function registerIpcHandlers() {
   registerBadgeIpc();
   registerPrintIpc();
   registerSafeStorageIpc();
+  registerGlobalShortcutIpc();
 }
 
 module.exports = { registerIpcHandlers };

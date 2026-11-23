@@ -268,5 +268,45 @@ contextBridge.exposeInMainWorld('desktop', {
          */
         clearSecrets: () =>
             ipcRenderer.invoke('desktop:safe-storage:clear')
+    },
+
+    // ── Global Shortcuts & Quick Capture (Milestone 25) ──────────────────────
+
+    globalShortcuts: {
+        /**
+         * Gets status of active system-wide global shortcuts.
+         * @returns {Promise<Array<{ accelerator: string, action: string, registered: boolean }>>}
+         */
+        getStatus: () =>
+            ipcRenderer.invoke('desktop:global-shortcuts:get-status'),
+
+        /**
+         * Registers a custom global shortcut.
+         * @param {string} accelerator
+         * @param {string} [action]
+         * @returns {Promise<boolean>}
+         */
+        register: (accelerator, action) =>
+            ipcRenderer.invoke('desktop:global-shortcuts:register', accelerator, action),
+
+        /**
+         * Unregisters a global shortcut.
+         * @param {string} accelerator
+         * @returns {Promise<boolean>}
+         */
+        unregister: (accelerator) =>
+            ipcRenderer.invoke('desktop:global-shortcuts:unregister', accelerator),
+
+        /**
+         * Subscribes to custom shortcut triggers.
+         * @param {(data: { accelerator: string, action: string }) => void} callback
+         * @returns {() => void}
+         */
+        onTriggered: (callback) => {
+            if (typeof callback !== 'function') return () => { };
+            const handler = (_event, data) => callback(data);
+            ipcRenderer.on('desktop:shortcut-triggered', handler);
+            return () => ipcRenderer.removeListener('desktop:shortcut-triggered', handler);
+        }
     }
 });

@@ -12,6 +12,7 @@ const { initOfflineMonitor } = require('./services/offline-monitor.service.cjs')
 const { configureSessionCache } = require('./services/performance.service.cjs');
 const { createTray, destroyTray } = require('./services/tray.service.cjs');
 const { clearAttention } = require('./services/badge.service.cjs');
+const { registerGlobalShortcuts, unregisterGlobalShortcuts } = require('./services/global-shortcut.service.cjs');
 
 // Configure application metadata
 app.setName('CivicResolve AI');
@@ -163,6 +164,7 @@ if (!gotTheLock) {
         setupApplicationMenu(isDev);
         createWindow();
         createTray(mainWindow);
+        registerGlobalShortcuts(mainWindow);
 
         app.on('activate', () => {
             // On macOS re-create or restore window when dock icon is clicked
@@ -178,6 +180,7 @@ if (!gotTheLock) {
 
     app.on('before-quit', () => {
         app.isQuitting = true;
+        unregisterGlobalShortcuts();
         destroyTray();
     });
 
