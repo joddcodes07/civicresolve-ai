@@ -207,5 +207,23 @@ contextBridge.exposeInMainWorld('desktop', {
      * @returns {Promise<{ success: boolean }>}
      */
     setProgressBar: (progress, options = {}) =>
-        ipcRenderer.invoke('desktop:set-progress-bar', progress, options)
+        ipcRenderer.invoke('desktop:set-progress-bar', progress, options),
+
+    // ── Native Print & PDF Export (Milestone 23) ─────────────────────────────
+
+    /**
+     * Triggers native print dialog.
+     * @param {object} [options]
+     * @returns {Promise<{ success: boolean, failureReason?: string }>}
+     */
+    print: (options = {}) =>
+        ipcRenderer.invoke('desktop:print', options),
+
+    /**
+     * Generates a PDF of the current view and prompts native save dialog.
+     * @param {object} [options]
+     * @returns {Promise<{ success: boolean, filePath?: string, canceled: boolean, error?: string }>}
+     */
+    exportPdf: (options = {}) =>
+        ipcRenderer.invoke('desktop:export-pdf', options)
 });

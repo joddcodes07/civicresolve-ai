@@ -13,7 +13,7 @@ import { SlaRing } from '../../components/ui/SlaRing.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { Timeline } from '../../components/domain/Timeline.jsx'
 import { BeforeAfter } from '../../components/domain/BeforeAfter.jsx'
-import { IconCheck, IconClose, IconSend } from '../../components/ui/Icons.jsx'
+import { IconCheck, IconClose, IconSend, IconDownload } from '../../components/ui/Icons.jsx'
 import { formatDateTime, timeAgo } from '../../lib/format.js'
 
 function Stars({ value, onChange }) {
@@ -167,6 +167,21 @@ export default function Track() {
     } catch (err) {
       toast(err.message || t('common.somethingWrong'), { tone: 'red' })
     }
+  }
+
+  async function handlePrintOrPdf() {
+    if (!complaint) return
+    if (window.desktop?.isElectron && window.desktop?.exportPdf) {
+      const result = await window.desktop.exportPdf({
+        defaultFilename: `CivicResolve-${complaint.code || 'Receipt'}`,
+        pageSize: 'A4'
+      })
+      if (result.success) {
+        toast('Grievance receipt exported successfully', { tone: 'green' })
+      }
+      return
+    }
+    window.print()
   }
 
   const isClosed = complaint && ['CONFIRMED'].includes(complaint.status)
@@ -328,6 +343,16 @@ export default function Track() {
                     breached={complaint.sla.breached}
                     label={complaint.sla.breached ? 'overdue' : t('track.sla')}
                   />
+                </div>
+                <div className="hair-t mt-4 flex justify-end pt-3">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handlePrintOrPdf}
+                    icon={<IconDownload size={14} />}
+                  >
+                    Print / Export PDF
+                  </Button>
                 </div>
               </div>
 
