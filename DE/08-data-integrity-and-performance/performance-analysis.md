@@ -36,3 +36,32 @@ No additional index is created here. EXPLAIN/EXPLAIN ANALYZE was not run because
 At 100 times current traffic (no current production volume was measured), the first pressure points to investigate are connection limits/pooling, large Complaint and event tables, queue filters/sorts, unbounded complaint listing in citizen history, and dashboard code that fetches substantial rows to aggregate in application memory. Officer queue pagination exists with a page size of 20; other routes need case-by-case review.
 
 Future options, not currently documented as implemented: managed connection pooling, keyset pagination for deep pages, caching stable reference data, read replicas for reporting, partitioning very large event tables after measurement, and moving expensive analytics to background jobs. Sharding would be a later architectural choice, not an immediate assumption.
+
+### EXPLAIN ANALYZE: Complaint Queue Query
+
+**Query tested:** Unresolved complaint queue, joined with Department, ordered by `dueAt`, with a limit of 50 records.
+
+**Observed execution plan:**
+- PostgreSQL used a sequential scan on `Complaint` and filtered out 2 of the 6 records.
+- It used a sequential scan on `Department`, which contained 2 records.
+- A Hash Join combined the complaint and department records.
+- A quicksort operation sorted the matching records by `dueAt`.
+- The query returned 4 matching complaints.
+
+**Measured results:**
+
+| Metric | Run 1 | Run 2 |
+|---|---:|---:|
+| Planning time | 2.372 ms | 3.396 ms |
+| Execution time | 0.156 ms | 0.229 ms |
+| Rows returned | 4 | 4 |
+
+**Analysis:**
+
+PostgreSQL selected sequential scans instead of index scans because the test database contains very few records. For such small tables, sequential scans can be more efficient than index lookups.
+
+The query completed in under 1 ms in both executions. However, these measurements are from a small fictional demonstration dataset and should not be treated as representative production performance benchmarks.
+
+For a larger dataset, the complaint queue's status filtering and `dueAt` ordering should be measured again. A composite index may be considered if actual query plans and workload measurements justify it.
+
+**Evidence:** `explain-queue-output.txt`
