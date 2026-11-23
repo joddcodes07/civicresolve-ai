@@ -10,6 +10,18 @@ try {
   token = null
 }
 
+// Asynchronously hydrate from desktop safeStorage keychain if available
+if (typeof window !== 'undefined' && window.desktop?.safeStorage?.getSecret) {
+  window.desktop.safeStorage
+    .getSecret(TOKEN_KEY)
+    .then((secureToken) => {
+      if (secureToken) {
+        token = secureToken
+      }
+    })
+    .catch(() => {})
+}
+
 export function getToken() {
   return token
 }
@@ -21,6 +33,15 @@ export function setToken(next) {
     else localStorage.removeItem(TOKEN_KEY)
   } catch {
     /* ignore */
+  }
+
+  // Sync to OS-level secure vault in Electron desktop
+  if (typeof window !== 'undefined' && window.desktop?.safeStorage) {
+    if (next) {
+      window.desktop.safeStorage.setSecret(TOKEN_KEY, next).catch(() => {})
+    } else {
+      window.desktop.safeStorage.removeSecret(TOKEN_KEY).catch(() => {})
+    }
   }
 }
 

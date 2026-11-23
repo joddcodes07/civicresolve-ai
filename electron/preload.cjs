@@ -225,5 +225,48 @@ contextBridge.exposeInMainWorld('desktop', {
      * @returns {Promise<{ success: boolean, filePath?: string, canceled: boolean, error?: string }>}
      */
     exportPdf: (options = {}) =>
-        ipcRenderer.invoke('desktop:export-pdf', options)
+        ipcRenderer.invoke('desktop:export-pdf', options),
+
+    // ── Safe Storage & Keychain Vault (Milestone 24) ─────────────────────────
+
+    safeStorage: {
+        /**
+         * Checks whether OS-level keychain encryption is available.
+         * @returns {Promise<boolean>}
+         */
+        isAvailable: () =>
+            ipcRenderer.invoke('desktop:safe-storage:is-available'),
+
+        /**
+         * Encrypts and securely persists a secret.
+         * @param {string} key
+         * @param {string} value
+         * @returns {Promise<boolean>}
+         */
+        setSecret: (key, value) =>
+            ipcRenderer.invoke('desktop:safe-storage:set', key, value),
+
+        /**
+         * Decrypts and retrieves a stored secret.
+         * @param {string} key
+         * @returns {Promise<string | null>}
+         */
+        getSecret: (key) =>
+            ipcRenderer.invoke('desktop:safe-storage:get', key),
+
+        /**
+         * Removes a stored secret from the vault.
+         * @param {string} key
+         * @returns {Promise<boolean>}
+         */
+        removeSecret: (key) =>
+            ipcRenderer.invoke('desktop:safe-storage:remove', key),
+
+        /**
+         * Clears all stored secrets.
+         * @returns {Promise<boolean>}
+         */
+        clearSecrets: () =>
+            ipcRenderer.invoke('desktop:safe-storage:clear')
+    }
 });

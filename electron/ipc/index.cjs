@@ -9,6 +9,7 @@ const { registerPerformanceIpc } = require('./performance.ipc.cjs');
 const { registerTrayIpc }        = require('./tray.ipc.cjs');
 const { registerBadgeIpc }       = require('./badge.ipc.cjs');
 const { registerPrintIpc }       = require('./print.ipc.cjs');
+const { registerSafeStorageIpc } = require('./safe-storage.ipc.cjs');
 
 function registerIpcHandlers() {
   registerAppIpc();
@@ -22,6 +23,7 @@ function registerIpcHandlers() {
   registerTrayIpc();
   registerBadgeIpc();
   registerPrintIpc();
+  registerSafeStorageIpc();
 }
 
 module.exports = { registerIpcHandlers };
