@@ -1,0 +1,174 @@
+erDiagram
+  USER {
+    text id PK
+    text name
+    text email UQ NULL
+    text phone UQ NULL
+    integer tokenVersion
+    text passwordHash NULL
+    text googleSubject UQ NULL
+    Role role
+    timestamp(3) createdAt
+    text departmentId NULL
+    text wardId NULL
+  }
+  DEPARTMENT {
+    text id PK
+    text name UQ
+    text code UQ
+    integer slaHours
+    timestamp(3) createdAt
+    text headUserId UQ NULL
+  }
+  CATEGORY {
+    text id PK
+    text name UQ
+    text subType NULL
+    integer defaultSeverity
+    text[] keywords
+    integer dupRadiusMetres
+    text departmentId
+  }
+  WARD {
+    text id PK
+    text name UQ
+    double precision lat
+    double precision lng
+    jsonb boundary NULL
+  }
+  ISSUE {
+    text id PK
+    text code UQ
+    double precision lat
+    double precision lng
+    integer reportCount
+    integer priority
+    IssueStatus status
+    timestamp(3) createdAt
+    timestamp(3) updatedAt
+    text categoryId
+    text wardId NULL
+  }
+  COMPLAINT {
+    text id PK
+    text code UQ
+    text originalText
+    text englishText NULL
+    text summary NULL
+    text language
+    integer severity
+    boolean safetyRisk
+    boolean nearSensitivePlace
+    double precision aiConfidence
+    boolean needsReview
+    text routingSource
+    integer priority
+    text priorityReason
+    double precision lat
+    double precision lng
+    text photoUrl NULL
+    text afterPhotoUrl NULL
+    ComplaintStatus status
+    integer escalationLevel
+    boolean reopened
+    integer slaHours
+    timestamp(3) dueAt
+    timestamp(3) resolvedAt NULL
+    timestamp(3) confirmsAt NULL
+    timestamp(3) createdAt
+    timestamp(3) updatedAt
+    text citizenId NULL
+    text officerId NULL
+    text categoryId NULL
+    text departmentId NULL
+    text wardId NULL
+    text issueId NULL
+  }
+  STATUSHISTORY {
+    text id PK
+    text complaintId
+    text fromStatus NULL
+    text toStatus
+    text note NULL
+    text photoUrl NULL
+    text changedById NULL
+    timestamp(3) createdAt
+  }
+  TRANSFER {
+    text id PK
+    text complaintId
+    text fromDeptId NULL
+    text toDeptId NULL
+    text reason
+    text officerId NULL
+    timestamp(3) createdAt
+  }
+  MESSAGE {
+    text id PK
+    text complaintId
+    SenderRole senderRole
+    text senderId NULL
+    text senderName NULL
+    text body
+    timestamp(3) createdAt
+  }
+  FEEDBACK {
+    text id PK
+    text complaintId UQ
+    boolean confirmed
+    integer rating NULL
+    text comment NULL
+    timestamp(3) createdAt
+  }
+  NOTIFICATION {
+    text id PK
+    text userId NULL
+    text complaintId NULL
+    Channel channel
+    text message
+    boolean read
+    timestamp(3) sentAt
+  }
+  SETTING {
+    text key PK
+    text value
+    timestamp(3) updatedAt
+  }
+  PASSWORDRESETTOKEN {
+    text id PK
+    text tokenHash UQ
+    text userId
+    timestamp(3) expiresAt
+    timestamp(3) usedAt NULL
+    timestamp(3) createdAt
+  }
+  SENSITIVEPLACE {
+    text id PK
+    text name
+    text kind
+    double precision lat
+    double precision lng
+    text sourceUrl
+  }
+  GOOGLELOGINTICKET {
+    text tokenHash PK
+    text userId
+    timestamp(3) expiresAt
+  }
+  USER ||--o{ COMPLAINT : reports
+  USER ||--o{ COMPLAINT : assigned
+  DEPARTMENT ||--o{ CATEGORY : owns
+  DEPARTMENT o|--o{ USER : members
+  DEPARTMENT o|--o{ COMPLAINT : routes
+  CATEGORY o|--o{ COMPLAINT : classifies
+  WARD o|--o{ COMPLAINT : locates
+  CATEGORY ||--o{ ISSUE : groups
+  ISSUE o|--o{ COMPLAINT : aggregates
+  COMPLAINT ||--o{ STATUSHISTORY : history
+  COMPLAINT ||--o{ TRANSFER : transfers
+  COMPLAINT ||--o{ MESSAGE : messages
+  COMPLAINT ||--o| FEEDBACK : feedback
+  USER o|--o{ NOTIFICATION : receives
+  COMPLAINT o|--o{ NOTIFICATION : references
+  USER ||--o{ PASSWORDRESETTOKEN : tokens
+  USER ||--o{ GOOGLELOGINTICKET : tickets

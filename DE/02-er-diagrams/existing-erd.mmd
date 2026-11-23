@@ -1,0 +1,24 @@
+erDiagram
+  USER ||--o{ COMPLAINT : reports
+  USER ||--o{ COMPLAINT : assigned_to
+  USER o|--o{ DEPARTMENT : heads
+  DEPARTMENT ||--o{ USER : employs
+  DEPARTMENT ||--o{ CATEGORY : classifies
+  DEPARTMENT o|--o{ COMPLAINT : handles
+  CATEGORY o|--o{ COMPLAINT : categorizes
+  WARD o|--o{ USER : associated_with
+  WARD o|--o{ COMPLAINT : locates
+  CATEGORY ||--o{ ISSUE : groups
+  WARD o|--o{ ISSUE : locates
+  ISSUE o|--o{ COMPLAINT : groups
+  COMPLAINT ||--o{ STATUSHISTORY : records
+  COMPLAINT ||--o{ TRANSFER : transferred
+  COMPLAINT ||--o{ MESSAGE : discusses
+  COMPLAINT ||--o| FEEDBACK : receives
+  COMPLAINT o|--o{ NOTIFICATION : triggers
+  USER o|--o{ NOTIFICATION : receives
+  USER o|--o{ STATUSHISTORY : changes
+  USER o|--o{ TRANSFER : performs
+  USER o|--o{ MESSAGE : sends
+  DEPARTMENT o|--o{ TRANSFER : from
+  DEPARTMENT o|--o{ TRANSFER : to

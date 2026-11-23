@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1115" viewBox="0 0 1400 1115">
+<rect width="100%" height="100%" fill="#f8fafc"/>
+<style>text{font-family:Arial,sans-serif;fill:#172b4d}.t{font-size:28px;font-weight:bold}.h{font-size:17px;font-weight:bold}.r{font-size:14px}</style>
+<text x="35" y="40" class="t">CivicResolve AI — Conceptual ERD</text>
+<rect x="35" y="70" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="47" y="98" class="h">User</text>
+<rect x="485" y="70" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="497" y="98" class="h">Department</text>
+<rect x="935" y="70" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="947" y="98" class="h">Category</text>
+<rect x="35" y="135" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="47" y="163" class="h">Ward</text>
+<rect x="485" y="135" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="497" y="163" class="h">Issue</text>
+<rect x="935" y="135" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="947" y="163" class="h">Complaint</text>
+<rect x="35" y="200" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="47" y="228" class="h">Status history</text>
+<rect x="485" y="200" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="497" y="228" class="h">Transfer</text>
+<rect x="935" y="200" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="947" y="228" class="h">Message</text>
+<rect x="35" y="265" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="47" y="293" class="h">Feedback</text>
+<rect x="485" y="265" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="497" y="293" class="h">Notification</text>
+<text x="40" y="330" class="r">User || — o{ Complaint · reports</text>
+<text x="40" y="348" class="r">User || — o{ Complaint · assigned</text>
+<text x="40" y="366" class="r">Department || — o{ Category · owns</text>
+<text x="40" y="384" class="r">Department o| — o{ User · members</text>
+<text x="40" y="402" class="r">Department o| — o{ Complaint · routes</text>
+<text x="40" y="420" class="r">Category o| — o{ Complaint · classifies</text>
+<text x="40" y="438" class="r">Ward o| — o{ Complaint · locates</text>
+<text x="40" y="456" class="r">Category || — o{ Issue · groups</text>
+<text x="40" y="474" class="r">Issue o| — o{ Complaint · aggregates</text>
+<text x="40" y="492" class="r">Complaint || — o{ StatusHistory · history</text>
+<text x="40" y="510" class="r">Complaint || — o{ Transfer · transfers</text>
+<text x="40" y="528" class="r">Complaint || — o{ Message · messages</text>
+<text x="40" y="546" class="r">Complaint || — o| Feedback · feedback</text>
+<text x="40" y="564" class="r">User o| — o{ Notification · receives</text>
+<text x="40" y="582" class="r">Complaint o| — o{ Notification · references</text>
+</svg>

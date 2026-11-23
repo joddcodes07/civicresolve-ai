@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="2260" viewBox="0 0 1700 2260">
+<rect width="100%" height="100%" fill="#f8fafc"/>
+<style>text{font-family:Arial,sans-serif;fill:#172b4d}.title{font-size:30px;font-weight:bold}.subtitle{font-size:15px;fill:#52647a}.head{font-size:19px;font-weight:bold}.field{font-size:13px}</style>
+<text x="40" y="44" class="title">CivicResolve AI — Final Physical ERD</text>
+<text x="40" y="72" class="subtitle">Prisma schema snapshot; PK primary key · FK foreign key · UQ unique · NULL optional</text>
+<rect x="40" y="105" width="523" height="286" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="52" y="130" class="head">User</text>
+<text x="52" y="152" class="field">id: text [PK]</text>
+<text x="52" y="174" class="field">name: text</text>
+<text x="52" y="196" class="field">email: text [UQ,NULL]</text>
+<text x="52" y="218" class="field">phone: text [UQ,NULL]</text>
+<text x="52" y="240" class="field">tokenVersion: integer</text>
+<text x="52" y="262" class="field">passwordHash: text [NULL]</text>
+<text x="52" y="284" class="field">googleSubject: text [UQ,NULL]</text>
+<text x="52" y="306" class="field">role: Role</text>
+<text x="52" y="328" class="field">createdAt: timestamp(3)</text>
+<text x="52" y="350" class="field">departmentId: text [NULL]</text>
+<text x="52" y="372" class="field">wardId: text [NULL]</text>
+<rect x="588" y="105" width="523" height="176" rx="8" fill="#e2f0d9" stroke="#496581"/>
+<text x="600" y="130" class="head">Department</text>
+<text x="600" y="152" class="field">id: text [PK]</text>
+<text x="600" y="174" class="field">name: text [UQ]</text>
+<text x="600" y="196" class="field">code: text [UQ]</text>
+<text x="600" y="218" class="field">slaHours: integer</text>
+<text x="600" y="240" class="field">createdAt: timestamp(3)</text>
+<text x="600" y="262" class="field">headUserId: text [UQ,NULL]</text>
+<rect x="1136" y="105" width="523" height="198" rx="8" fill="#fce4d6" stroke="#496581"/>
+<text x="1148" y="130" class="head">Category</text>
+<text x="1148" y="152" class="field">id: text [PK]</text>
+<text x="1148" y="174" class="field">name: text [UQ]</text>
+<text x="1148" y="196" class="field">subType: text [NULL]</text>
+<text x="1148" y="218" class="field">defaultSeverity: integer</text>
+<text x="1148" y="240" class="field">keywords: text[]</text>
+<text x="1148" y="262" class="field">dupRadiusMetres: integer</text>
+<text x="1148" y="284" class="field">departmentId: text</text>
+<rect x="40" y="416" width="523" height="154" rx="8" fill="#e4dfec" stroke="#496581"/>
+<text x="52" y="441" class="head">Ward</text>
+<text x="52" y="463" class="field">id: text [PK]</text>
+<text x="52" y="485" class="field">name: text [UQ]</text>
+<text x="52" y="507" class="field">lat: double precision</text>
+<text x="52" y="529" class="field">lng: double precision</text>
+<text x="52" y="551" class="field">boundary: jsonb [NULL]</text>
+<rect x="588" y="416" width="523" height="286" rx="8" fill="#d9ead3" stroke="#496581"/>
+<text x="600" y="441" class="head">Issue</text>
+<text x="600" y="463" class="field">id: text [PK]</text>
+<text x="600" y="485" class="field">code: text [UQ]</text>
+<text x="600" y="507" class="field">lat: double precision</text>
+<text x="600" y="529" class="field">lng: double precision</text>
+<text x="600" y="551" class="field">reportCount: integer</text>
+<text x="600" y="573" class="field">priority: integer</text>
+<text x="600" y="595" class="field">status: IssueStatus</text>
+<text x="600" y="617" class="field">createdAt: timestamp(3)</text>
+<text x="600" y="639" class="field">updatedAt: timestamp(3)</text>
+<text x="600" y="661" class="field">categoryId: text</text>
+<text x="600" y="683" class="field">wardId: text [NULL]</text>
+<rect x="1136" y="416" width="523" height="770" rx="8" fill="#fff2cc" stroke="#496581"/>
+<text x="1148" y="441" class="head">Complaint</text>
+<text x="1148" y="463" class="field">id: text [PK]</text>
+<text x="1148" y="485" class="field">code: text [UQ]</text>
+<text x="1148" y="507" class="field">originalText: text</text>
+<text x="1148" y="529" class="field">englishText: text [NULL]</text>
+<text x="1148" y="551" class="field">summary: text [NULL]</text>
+<text x="1148" y="573" class="field">language: text</text>
+<text x="1148" y="595" class="field">severity: integer</text>
+<text x="1148" y="617" class="field">safetyRisk: boolean</text>
+<text x="1148" y="639" class="field">nearSensitivePlace: boolean</text>
+<text x="1148" y="661" class="field">aiConfidence: double precision</text>
+<text x="1148" y="683" class="field">needsReview: boolean</text>
+<text x="1148" y="705" class="field">routingSource: text</text>
+<text x="1148" y="727" class="field">priority: integer</text>
+<text x="1148" y="749" class="field">priorityReason: text</text>
+<text x="1148" y="771" class="field">lat: double precision</text>
+<text x="1148" y="793" class="field">lng: double precision</text>
+<text x="1148" y="815" class="field">photoUrl: text [NULL]</text>
+<text x="1148" y="837" class="field">afterPhotoUrl: text [NULL]</text>
+<text x="1148" y="859" class="field">status: ComplaintStatus</text>
+<text x="1148" y="881" class="field">escalationLevel: integer</text>
+<text x="1148" y="903" class="field">reopened: boolean</text>
+<text x="1148" y="925" class="field">slaHours: integer</text>
+<text x="1148" y="947" class="field">dueAt: timestamp(3)</text>
+<text x="1148" y="969" class="field">resolvedAt: timestamp(3) [NULL]</text>
+<text x="1148" y="991" class="field">confirmsAt: timestamp(3) [NULL]</text>
+<text x="1148" y="1013" class="field">createdAt: timestamp(3)</text>
+<text x="1148" y="1035" class="field">updatedAt: timestamp(3)</text>
+<text x="1148" y="1057" class="field">citizenId: text [NULL]</text>
+<text x="1148" y="1079" class="field">officerId: text [NULL]</text>
+<text x="1148" y="1101" class="field">categoryId: text [NULL]</text>
+<text x="1148" y="1123" class="field">departmentId: text [NULL]</text>
+<text x="1148" y="1145" class="field">wardId: text [NULL]</text>
+<text x="1148" y="1167" class="field">issueId: text [NULL]</text>
+<rect x="40" y="1211" width="523" height="220" rx="8" fill="#f4cccc" stroke="#496581"/>
+<text x="52" y="1236" class="head">StatusHistory</text>
+<text x="52" y="1258" class="field">id: text [PK]</text>
+<text x="52" y="1280" class="field">complaintId: text</text>
+<text x="52" y="1302" class="field">fromStatus: text [NULL]</text>
+<text x="52" y="1324" class="field">toStatus: text</text>
+<text x="52" y="1346" class="field">note: text [NULL]</text>
+<text x="52" y="1368" class="field">photoUrl: text [NULL]</text>
+<text x="52" y="1390" class="field">changedById: text [NULL]</text>
+<text x="52" y="1412" class="field">createdAt: timestamp(3)</text>
+<rect x="588" y="1211" width="523" height="198" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="600" y="1236" class="head">Transfer</text>
+<text x="600" y="1258" class="field">id: text [PK]</text>
+<text x="600" y="1280" class="field">complaintId: text</text>
+<text x="600" y="1302" class="field">fromDeptId: text [NULL]</text>
+<text x="600" y="1324" class="field">toDeptId: text [NULL]</text>
+<text x="600" y="1346" class="field">reason: text</text>
+<text x="600" y="1368" class="field">officerId: text [NULL]</text>
+<text x="600" y="1390" class="field">createdAt: timestamp(3)</text>
+<rect x="1136" y="1211" width="523" height="198" rx="8" fill="#e2f0d9" stroke="#496581"/>
+<text x="1148" y="1236" class="head">Message</text>
+<text x="1148" y="1258" class="field">id: text [PK]</text>
+<text x="1148" y="1280" class="field">complaintId: text</text>
+<text x="1148" y="1302" class="field">senderRole: SenderRole</text>
+<text x="1148" y="1324" class="field">senderId: text [NULL]</text>
+<text x="1148" y="1346" class="field">senderName: text [NULL]</text>
+<text x="1148" y="1368" class="field">body: text</text>
+<text x="1148" y="1390" class="field">createdAt: timestamp(3)</text>
+<rect x="40" y="1456" width="523" height="176" rx="8" fill="#fce4d6" stroke="#496581"/>
+<text x="52" y="1481" class="head">Feedback</text>
+<text x="52" y="1503" class="field">id: text [PK]</text>
+<text x="52" y="1525" class="field">complaintId: text [UQ]</text>
+<text x="52" y="1547" class="field">confirmed: boolean</text>
+<text x="52" y="1569" class="field">rating: integer [NULL]</text>
+<text x="52" y="1591" class="field">comment: text [NULL]</text>
+<text x="52" y="1613" class="field">createdAt: timestamp(3)</text>
+<rect x="588" y="1456" width="523" height="198" rx="8" fill="#e4dfec" stroke="#496581"/>
+<text x="600" y="1481" class="head">Notification</text>
+<text x="600" y="1503" class="field">id: text [PK]</text>
+<text x="600" y="1525" class="field">userId: text [NULL]</text>
+<text x="600" y="1547" class="field">complaintId: text [NULL]</text>
+<text x="600" y="1569" class="field">channel: Channel</text>
+<text x="600" y="1591" class="field">message: text</text>
+<text x="600" y="1613" class="field">read: boolean</text>
+<text x="600" y="1635" class="field">sentAt: timestamp(3)</text>
+<rect x="1136" y="1456" width="523" height="110" rx="8" fill="#d9ead3" stroke="#496581"/>
+<text x="1148" y="1481" class="head">Setting</text>
+<text x="1148" y="1503" class="field">key: text [PK]</text>
+<text x="1148" y="1525" class="field">value: text</text>
+<text x="1148" y="1547" class="field">updatedAt: timestamp(3)</text>
+<rect x="40" y="1679" width="523" height="176" rx="8" fill="#fff2cc" stroke="#496581"/>
+<text x="52" y="1704" class="head">PasswordResetToken</text>
+<text x="52" y="1726" class="field">id: text [PK]</text>
+<text x="52" y="1748" class="field">tokenHash: text [UQ]</text>
+<text x="52" y="1770" class="field">userId: text</text>
+<text x="52" y="1792" class="field">expiresAt: timestamp(3)</text>
+<text x="52" y="1814" class="field">usedAt: timestamp(3) [NULL]</text>
+<text x="52" y="1836" class="field">createdAt: timestamp(3)</text>
+<rect x="588" y="1679" width="523" height="176" rx="8" fill="#f4cccc" stroke="#496581"/>
+<text x="600" y="1704" class="head">SensitivePlace</text>
+<text x="600" y="1726" class="field">id: text [PK]</text>
+<text x="600" y="1748" class="field">name: text</text>
+<text x="600" y="1770" class="field">kind: text</text>
+<text x="600" y="1792" class="field">lat: double precision</text>
+<text x="600" y="1814" class="field">lng: double precision</text>
+<text x="600" y="1836" class="field">sourceUrl: text</text>
+<rect x="1136" y="1679" width="523" height="110" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="1148" y="1704" class="head">GoogleLoginTicket</text>
+<text x="1148" y="1726" class="field">tokenHash: text [PK]</text>
+<text x="1148" y="1748" class="field">userId: text</text>
+<text x="1148" y="1770" class="field">expiresAt: timestamp(3)</text>
+<text x="40" y="1920" class="field">User || — o{ Complaint · reports</text>
+<text x="40" y="1938" class="field">User || — o{ Complaint · assigned</text>
+<text x="40" y="1956" class="field">Department || — o{ Category · owns</text>
+<text x="40" y="1974" class="field">Department o| — o{ User · members</text>
+<text x="40" y="1992" class="field">Department o| — o{ Complaint · routes</text>
+<text x="40" y="2010" class="field">Category o| — o{ Complaint · classifies</text>
+<text x="40" y="2028" class="field">Ward o| — o{ Complaint · locates</text>
+<text x="40" y="2046" class="field">Category || — o{ Issue · groups</text>
+<text x="40" y="2064" class="field">Issue o| — o{ Complaint · aggregates</text>
+<text x="40" y="2082" class="field">Complaint || — o{ StatusHistory · history</text>
+<text x="40" y="2100" class="field">Complaint || — o{ Transfer · transfers</text>
+<text x="40" y="2118" class="field">Complaint || — o{ Message · messages</text>
+<text x="40" y="2136" class="field">Complaint || — o| Feedback · feedback</text>
+<text x="40" y="2154" class="field">User o| — o{ Notification · receives</text>
+<text x="40" y="2172" class="field">Complaint o| — o{ Notification · references</text>
+<text x="40" y="2190" class="field">User || — o{ PasswordResetToken · tokens</text>
+<text x="40" y="2208" class="field">User || — o{ GoogleLoginTicket · tickets</text>
+<text x="40" y="2232" class="subtitle">Optional foreign keys are nullable. No M:N junction table exists. Source: server/prisma/schema.prisma.</text></svg>
