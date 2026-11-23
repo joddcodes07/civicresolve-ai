@@ -55,11 +55,11 @@ SELECT i."code", i."status" FROM "Issue" i WHERE NOT EXISTS (
     AND c."status" IN ('SUBMITTED','ASSIGNED','IN_PROGRESS','REOPENED','NEEDS_REVIEW')
 ) ORDER BY i."createdAt" DESC;
 
--- Q12: UPDATE demonstration, narrowly scoped to fictional sample row; rollback.
+-- Q12: UPDATE demonstration, scoped to a row inserted in this transaction; rollback.
 BEGIN;
-UPDATE "Complaint" SET "priority" = 10
-WHERE "id" = 'co_demo_pothole' AND "code" = 'DEMO-C-001';
-SELECT "id", "priority" FROM "Complaint" WHERE "id" = 'co_demo_pothole';
+INSERT INTO "Department" ("id", "name", "code") VALUES ('de_sql_update', 'SQL Update Demo', 'SQL-UPD');
+UPDATE "Department" SET "slaHours" = 48 WHERE "id" = 'de_sql_update' AND "code" = 'SQL-UPD';
+SELECT "id", "slaHours" FROM "Department" WHERE "id" = 'de_sql_update';
 ROLLBACK;
 
 -- Q13: INSERT demonstration, rolled back.
@@ -68,8 +68,10 @@ INSERT INTO "Department" ("id", "name", "code") VALUES ('de_sql_demo', 'SQL Demo
 SELECT "id", "name", "code" FROM "Department" WHERE "id" = 'de_sql_demo';
 ROLLBACK;
 
--- Q14: DELETE demonstration, narrowly scoped to fictional sample row; rollback.
+-- Q14: DELETE demonstration, scoped to fictional rows inserted in this transaction; rollback.
 BEGIN;
-DELETE FROM "Message" WHERE "id" = 'me_demo_note' AND "complaintId" = 'co_demo_pothole';
-SELECT COUNT(*) AS remaining_demo_messages FROM "Message" WHERE "id" = 'me_demo_note';
+INSERT INTO "Complaint" ("id", "code", "originalText", "lat", "lng", "slaHours", "dueAt", "updatedAt") VALUES ('co_sql_delete', 'SQL-DEL-C', 'Fictional delete demonstration', 18.52, 73.85, 72, now() + interval '72 hours', now());
+INSERT INTO "Message" ("id", "complaintId", "senderRole", "body") VALUES ('me_sql_delete', 'co_sql_delete', 'BOT', 'Fictional delete demonstration');
+DELETE FROM "Message" WHERE "id" = 'me_sql_delete' AND "complaintId" = 'co_sql_delete';
+SELECT COUNT(*) AS remaining_demo_messages FROM "Message" WHERE "id" = 'me_sql_delete';
 ROLLBACK;

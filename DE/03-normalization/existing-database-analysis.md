@@ -2,11 +2,11 @@
 
 ## Evidence examined
 
-The current Prisma model was compared with all four checked-in migrations under `server/prisma/migrations/`. The first migration creates the initial 13 domain/configuration tables; later migrations add `PasswordResetToken`, `SensitivePlace`, `GoogleLoginTicket`, and later columns/indexes. This is a source-level reconstruction, not a live catalog inspection. No database URL was connected.
+The current Prisma model was compared with all four checked-in migrations under `server/prisma/migrations/`. The first migration creates the initial 12 domain/configuration tables; later migrations add `PasswordResetToken`, `SensitivePlace`, `GoogleLoginTicket`, and later columns/indexes. This is a source-level reconstruction, not a live catalog inspection. No database URL was connected.
 
 ## Current model inventory
 
-The final Prisma schema defines 16 models: `User`, `Department`, `Category`, `Ward`, `Issue`, `Complaint`, `StatusHistory`, `Transfer`, `Message`, `Feedback`, `Notification`, `Setting`, `PasswordResetToken`, `SensitivePlace`, and `GoogleLoginTicket` (count: 15; the model list contains 15). This correction is explicit: it is 15 tables/models. The named enum types are `Role`, `ComplaintStatus`, `IssueStatus`, `SenderRole`, and `Channel`.
+The final Prisma schema defines 15 models: `User`, `Department`, `Category`, `Ward`, `Issue`, `Complaint`, `StatusHistory`, `Transfer`, `Message`, `Feedback`, `Notification`, `Setting`, `PasswordResetToken`, `SensitivePlace`, and `GoogleLoginTicket`. The named enum types are `Role`, `ComplaintStatus`, `IssueStatus`, `SenderRole`, and `Channel`.
 
 The initial migration lacks the later `tokenVersion`, `nearSensitivePlace`, and Google sign-in fields/tables, and it defines `User.passwordHash` as required. The later Google migration makes that field nullable and adds `googleSubject`; current Prisma matches the later state. `SensitivePlace` and `PasswordResetToken` came from the second migration; the complaint citizen/date composite index came in that migration too.
 

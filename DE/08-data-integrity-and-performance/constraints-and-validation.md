@@ -19,4 +19,4 @@ Examples: `server/src/routes/auth.routes.js`, `server/src/routes/complaints.rout
 
 ## Validation demonstration
 
-No intentionally invalid insert was executed. A future test should violate an actual FK (for example, a complaint referencing a nonexistent department) inside a transaction on a disposable migrated database, capture the PostgreSQL FK error, and roll back. Do not infer a successful rejection output without running it.
+`invalid-constraint-demo.sql` prepares an intentionally invalid Category insert with a nonexistent department FK. It was not executed. Run only on a disposable migrated database, capture the PostgreSQL FK error, and roll back. Do not infer a successful rejection output without running it.

@@ -12,7 +12,7 @@
 - `server/prisma/schema.prisma` unique/FK/enum declarations.
 - `server/src/services/submissionService.js` for the transaction and advisory lock.
 - `server/src/services/complaintService.js` for status updates and history writes.
-- The invalid-FK demonstration is pending safe test DB execution.
+- `DE/08-data-integrity-and-performance/invalid-constraint-demo.sql` is pending safe test DB execution.
 
 ## Follow-up questions
 

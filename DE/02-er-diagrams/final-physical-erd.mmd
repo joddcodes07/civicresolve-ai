@@ -2,56 +2,56 @@ erDiagram
   USER {
     text id PK
     text name
-    text email UQ NULL
-    text phone UQ NULL
+    text email UK NULL
+    text phone UK NULL
     integer tokenVersion
     text passwordHash NULL
-    text googleSubject UQ NULL
+    text googleSubject UK NULL
     Role role
-    timestamp(3) createdAt
-    text departmentId NULL
-    text wardId NULL
+    timestamp createdAt
+    text departmentId FK NULL
+    text wardId FK NULL
   }
   DEPARTMENT {
     text id PK
-    text name UQ
-    text code UQ
+    text name UK
+    text code UK
     integer slaHours
-    timestamp(3) createdAt
-    text headUserId UQ NULL
+    timestamp createdAt
+    text headUserId UK FK NULL
   }
   CATEGORY {
     text id PK
-    text name UQ
+    text name UK
     text subType NULL
     integer defaultSeverity
-    text[] keywords
+    text_array keywords
     integer dupRadiusMetres
-    text departmentId
+    text departmentId FK
   }
   WARD {
     text id PK
-    text name UQ
-    double precision lat
-    double precision lng
+    text name UK
+    double_precision lat
+    double_precision lng
     jsonb boundary NULL
   }
   ISSUE {
     text id PK
-    text code UQ
-    double precision lat
-    double precision lng
+    text code UK
+    double_precision lat
+    double_precision lng
     integer reportCount
     integer priority
     IssueStatus status
-    timestamp(3) createdAt
-    timestamp(3) updatedAt
-    text categoryId
-    text wardId NULL
+    timestamp createdAt
+    timestamp updatedAt
+    text categoryId FK
+    text wardId FK NULL
   }
   COMPLAINT {
     text id PK
-    text code UQ
+    text code UK
     text originalText
     text englishText NULL
     text summary NULL
@@ -59,116 +59,124 @@ erDiagram
     integer severity
     boolean safetyRisk
     boolean nearSensitivePlace
-    double precision aiConfidence
+    double_precision aiConfidence
     boolean needsReview
     text routingSource
     integer priority
     text priorityReason
-    double precision lat
-    double precision lng
+    double_precision lat
+    double_precision lng
     text photoUrl NULL
     text afterPhotoUrl NULL
     ComplaintStatus status
     integer escalationLevel
     boolean reopened
     integer slaHours
-    timestamp(3) dueAt
-    timestamp(3) resolvedAt NULL
-    timestamp(3) confirmsAt NULL
-    timestamp(3) createdAt
-    timestamp(3) updatedAt
-    text citizenId NULL
-    text officerId NULL
-    text categoryId NULL
-    text departmentId NULL
-    text wardId NULL
-    text issueId NULL
+    timestamp dueAt
+    timestamp resolvedAt NULL
+    timestamp confirmsAt NULL
+    timestamp createdAt
+    timestamp updatedAt
+    text citizenId FK NULL
+    text officerId FK NULL
+    text categoryId FK NULL
+    text departmentId FK NULL
+    text wardId FK NULL
+    text issueId FK NULL
   }
   STATUSHISTORY {
     text id PK
-    text complaintId
+    text complaintId FK
     text fromStatus NULL
     text toStatus
     text note NULL
     text photoUrl NULL
-    text changedById NULL
-    timestamp(3) createdAt
+    text changedById FK NULL
+    timestamp createdAt
   }
   TRANSFER {
     text id PK
-    text complaintId
-    text fromDeptId NULL
-    text toDeptId NULL
+    text complaintId FK
+    text fromDeptId FK NULL
+    text toDeptId FK NULL
     text reason
-    text officerId NULL
-    timestamp(3) createdAt
+    text officerId FK NULL
+    timestamp createdAt
   }
   MESSAGE {
     text id PK
-    text complaintId
+    text complaintId FK
     SenderRole senderRole
-    text senderId NULL
+    text senderId FK NULL
     text senderName NULL
     text body
-    timestamp(3) createdAt
+    timestamp createdAt
   }
   FEEDBACK {
     text id PK
-    text complaintId UQ
+    text complaintId UK FK
     boolean confirmed
     integer rating NULL
     text comment NULL
-    timestamp(3) createdAt
+    timestamp createdAt
   }
   NOTIFICATION {
     text id PK
-    text userId NULL
-    text complaintId NULL
+    text userId FK NULL
+    text complaintId FK NULL
     Channel channel
     text message
     boolean read
-    timestamp(3) sentAt
+    timestamp sentAt
   }
   SETTING {
     text key PK
     text value
-    timestamp(3) updatedAt
+    timestamp updatedAt
   }
   PASSWORDRESETTOKEN {
     text id PK
-    text tokenHash UQ
-    text userId
-    timestamp(3) expiresAt
-    timestamp(3) usedAt NULL
-    timestamp(3) createdAt
+    text tokenHash UK
+    text userId FK
+    timestamp expiresAt
+    timestamp usedAt NULL
+    timestamp createdAt
   }
   SENSITIVEPLACE {
     text id PK
     text name
     text kind
-    double precision lat
-    double precision lng
+    double_precision lat
+    double_precision lng
     text sourceUrl
   }
   GOOGLELOGINTICKET {
     text tokenHash PK
-    text userId
-    timestamp(3) expiresAt
+    text userId FK
+    timestamp expiresAt
   }
-  USER ||--o{ COMPLAINT : reports
-  USER ||--o{ COMPLAINT : assigned
+  USER o|--o{ COMPLAINT : reports
+  USER o|--o{ COMPLAINT : assigned
   DEPARTMENT ||--o{ CATEGORY : owns
   DEPARTMENT o|--o{ USER : members
+  USER o|--o| DEPARTMENT : heads
   DEPARTMENT o|--o{ COMPLAINT : routes
   CATEGORY o|--o{ COMPLAINT : classifies
+  WARD o|--o{ USER : serves
   WARD o|--o{ COMPLAINT : locates
+  WARD o|--o{ ISSUE : locates
   CATEGORY ||--o{ ISSUE : groups
   ISSUE o|--o{ COMPLAINT : aggregates
   COMPLAINT ||--o{ STATUSHISTORY : history
   COMPLAINT ||--o{ TRANSFER : transfers
+  DEPARTMENT o|--o{ TRANSFER : from
+  DEPARTMENT o|--o{ TRANSFER : to
+  USER o|--o{ TRANSFER : performs
   COMPLAINT ||--o{ MESSAGE : messages
+  USER o|--o{ MESSAGE : sends
   COMPLAINT ||--o| FEEDBACK : feedback
+  USER o|--o{ STATUSHISTORY : changes
   USER o|--o{ NOTIFICATION : receives
   COMPLAINT o|--o{ NOTIFICATION : references
-  USER ||--o{ PASSWORDRESETTOKEN : tokens
-  USER ||--o{ GOOGLELOGINTICKET : tickets
+  USER ||--o{ PASSWORDRESETTOKEN : owns
+  USER ||--o{ GOOGLELOGINTICKET : owns

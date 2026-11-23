@@ -1,12 +1,40 @@
-// Initial migration model subset: later columns/tables are omitted. See migration history.
+// Initial migration schema reconstructed from 20261102184527_init.
+Enum Role {
+  CITIZEN
+  OFFICER
+  ADMIN
+}
+Enum ComplaintStatus {
+  SUBMITTED
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CONFIRMED
+  REOPENED
+  NEEDS_REVIEW
+}
+Enum IssueStatus {
+  OPEN
+  RESOLVED
+  CONFIRMED
+}
+Enum SenderRole {
+  CITIZEN
+  OFFICER
+  ADMIN
+  BOT
+}
+Enum Channel {
+  IN_APP
+  EMAIL
+  SMS
+}
 Table User {
   id text [pk]
   name text
   email text [unique, null]
   phone text [unique, null]
-  tokenVersion integer
-  passwordHash text [null]
-  googleSubject text [unique, null]
+  passwordHash text
   role Role
   createdAt timestamp(3)
   departmentId text [null]
@@ -63,7 +91,6 @@ Table Complaint {
   language text
   severity integer
   safetyRisk boolean
-  nearSensitivePlace boolean
   aiConfidence double precision
   needsReview boolean
   routingSource text
@@ -145,3 +172,26 @@ Table Setting {
   value text
   updatedAt timestamp(3)
 }
+Ref: User.departmentId > Department.id
+Ref: User.wardId > Ward.id
+Ref: Department.headUserId - User.id
+Ref: Category.departmentId > Department.id
+Ref: Issue.categoryId > Category.id
+Ref: Issue.wardId > Ward.id
+Ref: Complaint.citizenId > User.id
+Ref: Complaint.officerId > User.id
+Ref: Complaint.categoryId > Category.id
+Ref: Complaint.departmentId > Department.id
+Ref: Complaint.wardId > Ward.id
+Ref: Complaint.issueId > Issue.id
+Ref: StatusHistory.complaintId > Complaint.id
+Ref: StatusHistory.changedById > User.id
+Ref: Transfer.complaintId > Complaint.id
+Ref: Transfer.fromDeptId > Department.id
+Ref: Transfer.toDeptId > Department.id
+Ref: Transfer.officerId > User.id
+Ref: Message.complaintId > Complaint.id
+Ref: Message.senderId > User.id
+Ref: Feedback.complaintId - Complaint.id
+Ref: Notification.userId > User.id
+Ref: Notification.complaintId > Complaint.id

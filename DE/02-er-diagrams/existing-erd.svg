@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1180" viewBox="0 0 1400 1180">
-<rect width="100%" height="100%" fill="#f8fafc"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="817" viewBox="0 0 1400 817">
+<rect x="0" y="0" width="1400" height="817" fill="#ffffff"/>
 <style>text{font-family:Arial,sans-serif;fill:#172b4d}.t{font-size:28px;font-weight:bold}.h{font-size:17px;font-weight:bold}.r{font-size:14px}</style>
-<text x="35" y="40" class="t">CivicResolve AI — Initial Schema ERD</text>
+<text x="35" y="40" class="t">CivicResolve AI — Initial Migration ERD</text>
 <rect x="35" y="70" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
 <text x="47" y="98" class="h">User</text>
 <rect x="485" y="70" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
@@ -26,19 +26,27 @@
 <text x="497" y="293" class="h">Notification</text>
 <rect x="935" y="265" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
 <text x="947" y="293" class="h">Setting</text>
-<text x="40" y="330" class="r">User || — o{ Complaint · reports</text>
-<text x="40" y="348" class="r">User || — o{ Complaint · assigned</text>
-<text x="40" y="366" class="r">Department || — o{ Category · owns</text>
-<text x="40" y="384" class="r">Department o| — o{ User · members</text>
-<text x="40" y="402" class="r">Department o| — o{ Complaint · routes</text>
-<text x="40" y="420" class="r">Category o| — o{ Complaint · classifies</text>
-<text x="40" y="438" class="r">Ward o| — o{ Complaint · locates</text>
-<text x="40" y="456" class="r">Category || — o{ Issue · groups</text>
-<text x="40" y="474" class="r">Issue o| — o{ Complaint · aggregates</text>
-<text x="40" y="492" class="r">Complaint || — o{ StatusHistory · history</text>
-<text x="40" y="510" class="r">Complaint || — o{ Transfer · transfers</text>
-<text x="40" y="528" class="r">Complaint || — o{ Message · messages</text>
-<text x="40" y="546" class="r">Complaint || — o| Feedback · feedback</text>
-<text x="40" y="564" class="r">User o| — o{ Notification · receives</text>
-<text x="40" y="582" class="r">Complaint o| — o{ Notification · references</text>
+<text x="40" y="330" class="r">USER o|--o{ COMPLAINT · reports</text>
+<text x="40" y="349" class="r">USER o|--o{ COMPLAINT · assigned_to</text>
+<text x="40" y="368" class="r">USER o|--o| DEPARTMENT · heads</text>
+<text x="40" y="387" class="r">DEPARTMENT ||--o{ USER · employs</text>
+<text x="40" y="406" class="r">DEPARTMENT ||--o{ CATEGORY · classifies</text>
+<text x="40" y="425" class="r">DEPARTMENT o|--o{ COMPLAINT · handles</text>
+<text x="40" y="444" class="r">CATEGORY o|--o{ COMPLAINT · categorizes</text>
+<text x="40" y="463" class="r">WARD o|--o{ USER · associated_with</text>
+<text x="40" y="482" class="r">WARD o|--o{ COMPLAINT · locates</text>
+<text x="40" y="501" class="r">CATEGORY ||--o{ ISSUE · groups</text>
+<text x="40" y="520" class="r">WARD o|--o{ ISSUE · locates</text>
+<text x="40" y="539" class="r">ISSUE o|--o{ COMPLAINT · groups</text>
+<text x="40" y="558" class="r">COMPLAINT ||--o{ STATUSHISTORY · records</text>
+<text x="40" y="577" class="r">COMPLAINT ||--o{ TRANSFER · transferred</text>
+<text x="40" y="596" class="r">COMPLAINT ||--o{ MESSAGE · discusses</text>
+<text x="40" y="615" class="r">COMPLAINT ||--o| FEEDBACK · receives</text>
+<text x="40" y="634" class="r">COMPLAINT o|--o{ NOTIFICATION · triggers</text>
+<text x="40" y="653" class="r">USER o|--o{ NOTIFICATION · receives</text>
+<text x="40" y="672" class="r">USER o|--o{ STATUSHISTORY · changes</text>
+<text x="40" y="691" class="r">USER o|--o{ TRANSFER · performs</text>
+<text x="40" y="710" class="r">USER o|--o{ MESSAGE · sends</text>
+<text x="40" y="729" class="r">DEPARTMENT o|--o{ TRANSFER · from</text>
+<text x="40" y="748" class="r">DEPARTMENT o|--o{ TRANSFER · to</text>
 </svg>

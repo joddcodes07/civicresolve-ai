@@ -1,7 +1,7 @@
 erDiagram
-  USER ||--o{ COMPLAINT : reports
-  USER ||--o{ COMPLAINT : assigned_to
-  USER o|--o{ DEPARTMENT : heads
+  USER o|--o{ COMPLAINT : reports
+  USER o|--o{ COMPLAINT : assigned_to
+  USER o|--o| DEPARTMENT : heads
   DEPARTMENT ||--o{ USER : employs
   DEPARTMENT ||--o{ CATEGORY : classifies
   DEPARTMENT o|--o{ COMPLAINT : handles
@@ -22,3 +22,6 @@ erDiagram
   USER o|--o{ MESSAGE : sends
   DEPARTMENT o|--o{ TRANSFER : from
   DEPARTMENT o|--o{ TRANSFER : to
+  SETTING {
+    string key PK
+  }
