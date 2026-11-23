@@ -7,6 +7,7 @@ const { showContextMenu } = require('./menu/context.menu.cjs');
 const { loadWindowState, trackWindowState } = require('./services/window-state.service.cjs');
 const { dispatchDeepLink } = require('./services/deep-link.service.cjs');
 const { initUpdater } = require('./services/updater.service.cjs');
+const { initCrashReporter, attachWindowCrashHandlers } = require('./services/crash-reporter.service.cjs');
 
 // Configure application metadata
 app.setName('CivicResolve AI');
@@ -23,14 +24,11 @@ if (process.defaultApp) {
     app.setAsDefaultProtocolClient('civicresolve');
 }
 
-// Global exception and rejection handlers for graceful recovery and logging
-process.on('uncaughtException', (error) => {
-    console.error('[Main] Uncaught exception:', error);
-});
-
-process.on('unhandledRejection', (reason) => {
-    console.error('[Main] Unhandled promise rejection:', reason);
-});
+// Initialise crash reporter as early as possible so all process-level errors
+// are captured from the first tick, before app.whenReady() fires.
+// initCrashReporter installs its own uncaughtException/unhandledRejection handlers,
+// replacing the stubs below, and also listens for gpu-process-crashed / child-process-gone.
+initCrashReporter({ isDev: !app.isPackaged });
 
 // Enforce single-instance lock to prevent duplicate application processes
 const gotTheLock = app.requestSingleInstanceLock();
@@ -86,14 +84,8 @@ if (!gotTheLock) {
             showContextMenu(mainWindow, params, isDev);
         });
 
-        // Monitor renderer crash and unresponsiveness
-        mainWindow.webContents.on('render-process-gone', (event, details) => {
-            console.error('[Main] Renderer process gone:', details);
-        });
-
-        mainWindow.on('unresponsive', () => {
-            console.warn('[Main] Main window became unresponsive');
-        });
+        // Monitor renderer crash and unresponsiveness (Milestone 18: via crash reporter)
+        attachWindowCrashHandlers(mainWindow);
 
         mainWindow.on('closed', () => {
             mainWindow = null;

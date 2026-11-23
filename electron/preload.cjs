@@ -75,5 +75,39 @@ contextBridge.exposeInMainWorld('desktop', {
         const handler = (_event, payload) => callback(payload);
         ipcRenderer.on('desktop:update-status', handler);
         return () => ipcRenderer.removeListener('desktop:update-status', handler);
-    }
+    },
+
+    // ── Crash Reporter (Milestone 18) ────────────────────────────────────────
+
+    /**
+     * Returns up to `limit` persisted crash reports (newest first).
+     * @param {number} [limit=20]
+     * @returns {Promise<object[]>}
+     */
+    getCrashReports: (limit = 20) =>
+        ipcRenderer.invoke('desktop:get-crash-reports', limit),
+
+    /**
+     * Deletes all persisted crash log files.
+     * @returns {Promise<{deleted: number}>}
+     */
+    clearCrashReports: () =>
+        ipcRenderer.invoke('desktop:clear-crash-reports'),
+
+    /**
+     * Returns the absolute filesystem path of the crash-reports directory.
+     * Useful for a "Show in Finder/Explorer" button in the UI.
+     * @returns {Promise<string>}
+     */
+    getCrashReportDir: () =>
+        ipcRenderer.invoke('desktop:get-crash-report-dir'),
+
+    /**
+     * Sends a renderer-side error (from an ErrorBoundary or window.onerror)
+     * to the main process for structured crash logging.
+     * @param {{ message: string, stack?: string, componentStack?: string, url?: string }} payload
+     * @returns {Promise<{captured: boolean}>}
+     */
+    reportRendererError: (payload = {}) =>
+        ipcRenderer.invoke('desktop:report-renderer-error', payload)
 });
