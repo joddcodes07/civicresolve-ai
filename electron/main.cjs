@@ -10,6 +10,7 @@ const { initUpdater } = require('./services/updater.service.cjs');
 const { initCrashReporter, attachWindowCrashHandlers } = require('./services/crash-reporter.service.cjs');
 const { initOfflineMonitor } = require('./services/offline-monitor.service.cjs');
 const { configureSessionCache } = require('./services/performance.service.cjs');
+const { createTray, destroyTray } = require('./services/tray.service.cjs');
 
 // Configure application metadata
 app.setName('CivicResolve AI');
@@ -94,6 +95,14 @@ if (!gotTheLock) {
         // Monitor renderer crash and unresponsiveness (Milestone 18: via crash reporter)
         attachWindowCrashHandlers(mainWindow);
 
+        // Hide to tray instead of quitting when user closes the window
+        mainWindow.on('close', (event) => {
+            if (!app.isQuitting) {
+                event.preventDefault();
+                mainWindow.hide();
+            }
+        });
+
         mainWindow.on('closed', () => {
             mainWindow = null;
         });
@@ -147,6 +156,7 @@ if (!gotTheLock) {
         configureSessionCache();
         setupApplicationMenu(isDev);
         createWindow();
+        createTray(mainWindow);
 
         app.on('activate', () => {
             // On macOS re-create or restore window when dock icon is clicked
@@ -154,9 +164,15 @@ if (!gotTheLock) {
                 createWindow();
             } else {
                 if (mainWindow.isMinimized()) mainWindow.restore();
+                mainWindow.show();
                 mainWindow.focus();
             }
         });
+    });
+
+    app.on('before-quit', () => {
+        app.isQuitting = true;
+        destroyTray();
     });
 
     app.on('window-all-closed', () => {

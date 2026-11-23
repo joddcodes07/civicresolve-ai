@@ -155,5 +155,23 @@ contextBridge.exposeInMainWorld('desktop', {
      * @returns {Promise<object>}
      */
     getMemoryMetrics: () =>
-        ipcRenderer.invoke('desktop:get-memory-metrics')
+        ipcRenderer.invoke('desktop:get-memory-metrics'),
+
+    // ── System Tray (Milestone 21) ───────────────────────────────────────────
+
+    /**
+     * Updates the system tray tooltip text.
+     * @param {string} tooltip
+     * @returns {Promise<{ success: boolean }>}
+     */
+    setTrayTooltip: (tooltip) =>
+        ipcRenderer.invoke('desktop:set-tray-tooltip', tooltip),
+
+    /**
+     * Updates the system tray alert/badge state.
+     * @param {boolean} hasAlert
+     * @returns {Promise<{ success: boolean }>}
+     */
+    setTrayBadge: (hasAlert) =>
+        ipcRenderer.invoke('desktop:set-tray-badge', hasAlert)
 });

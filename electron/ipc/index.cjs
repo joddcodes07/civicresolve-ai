@@ -6,6 +6,7 @@ const { registerUpdaterIpc }  = require('./updater.ipc.cjs');
 const { registerCrashIpc }    = require('./crash.ipc.cjs');
 const { registerOfflineIpc }  = require('./offline.ipc.cjs');
 const { registerPerformanceIpc } = require('./performance.ipc.cjs');
+const { registerTrayIpc }        = require('./tray.ipc.cjs');
 
 function registerIpcHandlers() {
   registerAppIpc();
@@ -16,6 +17,7 @@ function registerIpcHandlers() {
   registerCrashIpc();
   registerOfflineIpc();
   registerPerformanceIpc();
+  registerTrayIpc();
 }
 
 module.exports = { registerIpcHandlers };
