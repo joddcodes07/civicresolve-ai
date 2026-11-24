@@ -27,3 +27,7 @@ npm-debug.log*
 # prisma
 server/prisma/*.db
 server/prisma/migrations/dev.db*
+
+# teammate-owned database diagrams and academic documentation — never commit
+docs/database/teammate-deliverables/
+docs/database/teammate-deliverables.zip

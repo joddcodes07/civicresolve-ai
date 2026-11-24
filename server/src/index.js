@@ -12,7 +12,7 @@ import { authenticateToken } from './middleware/auth.js'
 import { env } from './env.js'
 import { prisma, disconnectDb } from './db.js'
 import { setIO, rooms } from './socket.js'
-import { apiLimiter, authLimiter, previewLimiter } from './middleware/rateLimit.js'
+import { apiLimiter, previewLimiter } from './middleware/rateLimit.js'
 import { errorHandler, notFoundHandler } from './middleware/error.js'
 import { UPLOAD_DIR } from './middleware/upload.js'
 
@@ -60,7 +60,7 @@ app.use('/api', (_req, res, next) => {
   next()
 })
 app.use('/api', apiLimiter)
-app.use('/api/auth', authLimiter, authRoutes)
+app.use('/api/auth', authRoutes)
 app.use('/api/meta', metaRoutes)
 app.use('/api/ai', previewLimiter, aiRoutes)
 app.use('/api/complaints', complaintRoutes)

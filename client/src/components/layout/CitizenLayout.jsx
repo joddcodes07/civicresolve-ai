@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom'
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
+import { PageLoader } from './PageLoader.jsx'
 import { TopBar } from './TopBar.jsx'
 import { Footer } from './Footer.jsx'
 import { IconHome, IconPlus, IconTrack, IconMap, IconUser } from '../ui/Icons.jsx'
@@ -19,14 +20,18 @@ export function CitizenLayout() {
   const { pathname } = useLocation()
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' })
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }, [pathname])
 
   return (
     <div className="grain flex min-h-dvh flex-col">
       <TopBar />
       <main className="flex-1 pb-24 lg:pb-0">
-        <Outlet />
+        <Suspense fallback={<PageLoader />}>
+          <div key={pathname} className="page-enter">
+            <Outlet />
+          </div>
+        </Suspense>
       </main>
       <Footer />
 

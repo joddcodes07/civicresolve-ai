@@ -103,7 +103,34 @@ The sign-in page has **one-click demo buttons** for each role.
 | `npm run db:seed` | Re-seed the demo city (idempotent) |
 | `npm run db:down` | Stop the project-local Postgres |
 | `npm test` | Unit tests for the seven formulas + the classifier |
+| `npm --workspace server run test:db` | Database constraint tests (requires `RUN_DB_TESTS=true` and an isolated `_test`/`_dhruv` database) |
+| `npm --workspace server run db:validate` | Read-only 3NF and data-integrity validation against `DATABASE_URL` |
 | `npm run build` | Production build of the web app |
+
+---
+
+## Database model (3NF)
+
+The PostgreSQL schema is normalized to Third Normal Form. The one genuine First Normal Form violation — a
+multi-valued `keywords TEXT[]` column on `Category` — was replaced by an atomic child relation:
+
+```prisma
+model CategoryKeyword {
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  keyword    String
+
+  @@id([categoryId, keyword])
+  @@index([keyword])
+}
+```
+
+`StatusHistory.fromStatus` and `toStatus` are constrained to the `ComplaintStatus` enum instead of free text.
+Historical snapshots such as `Complaint.slaHours`, `Message.senderName`, and the materialized `Issue.reportCount`
+are intentional and documented in the database analysis; they are not live copies of another row's data.
+
+Run `npm --workspace server run db:validate` after a migration to check the composite key, enum domains, keyword
+atomicity/uniqueness, referential integrity, and the 277-keyword reference volume.
 
 ---
 
@@ -202,17 +229,23 @@ auto-confirms anything resolved 7 days ago with no reply.
 All queries go through Prisma (no string-built SQL). Requests are rate-limited, inputs are validated
 with Zod, and role guards protect every officer/admin route.
 
+`GET /api/officer/queue` accepts `filter` (`open` by default, plus `urgent`, `high`, `safety`,
+`breached`, `needs_review`, `reopened`, `in_progress`, `resolved`) and `page` (a positive integer,
+`1` by default). An unsupported `filter` or non-positive/non-integer `page` returns `400`
+(`{ "error": "Invalid queue filter" }` / `{ "error": "Invalid page" }`).
+
 ---
 
 ## Verification
 
 ```bash
-npm test        # 24 unit tests
+npm test        # 34 unit tests
 ```
 
 The suite covers the F1 worked example (84), crowd/overdue caps, F2 colours, F3 levels, F5/F6/F7
 worked examples, the proof-of-fix gate (blocks "forwarded…", requires an after-photo), duplicate
-similarity, point-in-polygon, PII masking, and the classifier across English / Hindi / Marathi / Hinglish.
+similarity, point-in-polygon, PII masking, officer queue query validation, and the classifier across
+English / Hindi / Marathi / Hinglish.
 
 ---
 

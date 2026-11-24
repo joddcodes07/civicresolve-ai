@@ -34,9 +34,14 @@ googleRoutes.use((_req, res, next) => {
   next()
 })
 
-googleRoutes.get('/status', (_req, res) => res.json({ enabled }))
+googleRoutes.get('/status', (_req, res) => res.json({ enabled, origin }))
 
-googleRoutes.get('/start', (_req, res) => {
+googleRoutes.get('/start', (req, res) => {
+  // Validate the initiating website before setting a host-bound OAuth cookie.
+  // A different callback host cannot receive that cookie or finish this flow.
+  if (req.query.origin !== undefined && req.query.origin !== origin) {
+    return res.status(409).json({ error: 'Google sign-in is configured for a different website.' })
+  }
   if (!enabled) return backToLogin(res, 'unavailable')
   const state = randomToken()
   const verifier = randomToken()

@@ -4,8 +4,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-// server/.env is the source of truth for this project, so it overrides any
-// ambient shell variables (e.g. a global NODE_ENV=production).
+// Hosting and explicit test environment values take precedence over local .env
+// defaults, including the database and public OAuth callback origin.
 loadEnv({ path: path.resolve(here, '../.env'), quiet: true, override: false })
 
 const bool = (v, fallback = false) => {
