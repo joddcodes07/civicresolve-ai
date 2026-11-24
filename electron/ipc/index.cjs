@@ -13,7 +13,8 @@ const { registerSafeStorageIpc } = require('./safe-storage.ipc.cjs');
 const { registerGlobalShortcutIpc } = require('./global-shortcut.ipc.cjs');
 const { registerWindowIpc }      = require('./window.ipc.cjs');
 const { registerPowerIpc }       = require('./power.ipc.cjs');
-const { registerOfflineQueueIpc } = require('./offline-queue.ipc.cjs');
+const { registerOfflineQueueIpc }  = require('./offline-queue.ipc.cjs');
+const { registerAttachmentIpc }    = require('./attachment.ipc.cjs');
 
 function registerIpcHandlers() {
   registerAppIpc();
@@ -32,6 +33,7 @@ function registerIpcHandlers() {
   registerWindowIpc();
   registerPowerIpc();
   registerOfflineQueueIpc();
+  registerAttachmentIpc();
 }
 
 module.exports = { registerIpcHandlers };

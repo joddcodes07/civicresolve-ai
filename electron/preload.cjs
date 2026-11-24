@@ -470,5 +470,68 @@ contextBridge.exposeInMainWorld('desktop', {
          */
         clearDraft: (key) =>
             ipcRenderer.invoke('desktop:draft:clear', key)
+    },
+
+    // ── Native File Attachments (Milestone 29) ────────────────────────────
+
+    attachments: {
+        /**
+         * Copies a user-chosen file into the native attachment store.
+         * The renderer receives safe metadata only — no host paths.
+         *
+         * @param {string} srcPath    Absolute path the user dropped/selected
+         * @param {string} [mimeType] Optional MIME hint
+         * @param {string} [sessionId] Form/session key for grouping
+         * @returns {Promise<{ success: boolean, attachment?: object, error?: string }>}
+         */
+        save: (srcPath, mimeType, sessionId) =>
+            ipcRenderer.invoke('desktop:attachment:save', srcPath, mimeType, sessionId),
+
+        /**
+         * Lists all stored attachments, optionally filtered by sessionId.
+         * @param {string} [sessionId]
+         * @returns {Promise<Array<object>>}
+         */
+        list: (sessionId) =>
+            ipcRenderer.invoke('desktop:attachment:list', sessionId),
+
+        /**
+         * Reads an attachment as Base64 for uploading to the API.
+         * @param {string} id
+         * @returns {Promise<{ success: boolean, id, name, mimeType, size, base64 }>}
+         */
+        read: (id) =>
+            ipcRenderer.invoke('desktop:attachment:read', id),
+
+        /**
+         * Removes a single stored attachment.
+         * @param {string} id
+         * @returns {Promise<{ success: boolean }>}
+         */
+        remove: (id) =>
+            ipcRenderer.invoke('desktop:attachment:remove', id),
+
+        /**
+         * Removes all attachments for a completed/cancelled session.
+         * @param {string} sessionId
+         * @returns {Promise<{ removed: number }>}
+         */
+        clearSession: (sessionId) =>
+            ipcRenderer.invoke('desktop:attachment:clearSession', sessionId),
+
+        /**
+         * Opens an attachment in the OS default viewer.
+         * @param {string} id
+         * @returns {Promise<{ success: boolean, error?: string }>}
+         */
+        open: (id) =>
+            ipcRenderer.invoke('desktop:attachment:open', id),
+
+        /**
+         * Returns allowed file types and size limits.
+         * @returns {Promise<{ maxFileSizeBytes, maxFileSizeMB, allowedExtensions }>}
+         */
+        constraints: () =>
+            ipcRenderer.invoke('desktop:attachment:constraints'),
     }
 });
