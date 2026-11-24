@@ -1,0 +1,182 @@
+erDiagram
+  USER {
+    text id PK
+    text name
+    text email UK NULL
+    text phone UK NULL
+    integer tokenVersion
+    text passwordHash NULL
+    text googleSubject UK NULL
+    Role role
+    timestamp createdAt
+    text departmentId FK NULL
+    text wardId FK NULL
+  }
+  DEPARTMENT {
+    text id PK
+    text name UK
+    text code UK
+    integer slaHours
+    timestamp createdAt
+    text headUserId UK FK NULL
+  }
+  CATEGORY {
+    text id PK
+    text name UK
+    text subType NULL
+    integer defaultSeverity
+    text_array keywords
+    integer dupRadiusMetres
+    text departmentId FK
+  }
+  WARD {
+    text id PK
+    text name UK
+    double_precision lat
+    double_precision lng
+    jsonb boundary NULL
+  }
+  ISSUE {
+    text id PK
+    text code UK
+    double_precision lat
+    double_precision lng
+    integer reportCount
+    integer priority
+    IssueStatus status
+    timestamp createdAt
+    timestamp updatedAt
+    text categoryId FK
+    text wardId FK NULL
+  }
+  COMPLAINT {
+    text id PK
+    text code UK
+    text originalText
+    text englishText NULL
+    text summary NULL
+    text language
+    integer severity
+    boolean safetyRisk
+    boolean nearSensitivePlace
+    double_precision aiConfidence
+    boolean needsReview
+    text routingSource
+    integer priority
+    text priorityReason
+    double_precision lat
+    double_precision lng
+    text photoUrl NULL
+    text afterPhotoUrl NULL
+    ComplaintStatus status
+    integer escalationLevel
+    boolean reopened
+    integer slaHours
+    timestamp dueAt
+    timestamp resolvedAt NULL
+    timestamp confirmsAt NULL
+    timestamp createdAt
+    timestamp updatedAt
+    text citizenId FK NULL
+    text officerId FK NULL
+    text categoryId FK NULL
+    text departmentId FK NULL
+    text wardId FK NULL
+    text issueId FK NULL
+  }
+  STATUSHISTORY {
+    text id PK
+    text complaintId FK
+    text fromStatus NULL
+    text toStatus
+    text note NULL
+    text photoUrl NULL
+    text changedById FK NULL
+    timestamp createdAt
+  }
+  TRANSFER {
+    text id PK
+    text complaintId FK
+    text fromDeptId FK NULL
+    text toDeptId FK NULL
+    text reason
+    text officerId FK NULL
+    timestamp createdAt
+  }
+  MESSAGE {
+    text id PK
+    text complaintId FK
+    SenderRole senderRole
+    text senderId FK NULL
+    text senderName NULL
+    text body
+    timestamp createdAt
+  }
+  FEEDBACK {
+    text id PK
+    text complaintId UK FK
+    boolean confirmed
+    integer rating NULL
+    text comment NULL
+    timestamp createdAt
+  }
+  NOTIFICATION {
+    text id PK
+    text userId FK NULL
+    text complaintId FK NULL
+    Channel channel
+    text message
+    boolean read
+    timestamp sentAt
+  }
+  SETTING {
+    text key PK
+    text value
+    timestamp updatedAt
+  }
+  PASSWORDRESETTOKEN {
+    text id PK
+    text tokenHash UK
+    text userId FK
+    timestamp expiresAt
+    timestamp usedAt NULL
+    timestamp createdAt
+  }
+  SENSITIVEPLACE {
+    text id PK
+    text name
+    text kind
+    double_precision lat
+    double_precision lng
+    text sourceUrl
+  }
+  GOOGLELOGINTICKET {
+    text tokenHash PK
+    text userId FK
+    timestamp expiresAt
+  }
+  USER o|--o{ COMPLAINT : reports
+  USER o|--o{ COMPLAINT : assigned
+  DEPARTMENT ||--o{ CATEGORY : owns
+  DEPARTMENT o|--o{ USER : members
+  USER o|--o| DEPARTMENT : heads
+  DEPARTMENT o|--o{ COMPLAINT : routes
+  CATEGORY o|--o{ COMPLAINT : classifies
+  WARD o|--o{ USER : serves
+  WARD o|--o{ COMPLAINT : locates
+  WARD o|--o{ ISSUE : locates
+  CATEGORY ||--o{ ISSUE : groups
+  ISSUE o|--o{ COMPLAINT : aggregates
+  COMPLAINT ||--o{ STATUSHISTORY : history
+  COMPLAINT ||--o{ TRANSFER : transfers
+  DEPARTMENT o|--o{ TRANSFER : from
+  DEPARTMENT o|--o{ TRANSFER : to
+  USER o|--o{ TRANSFER : performs
+  COMPLAINT ||--o{ MESSAGE : messages
+  USER o|--o{ MESSAGE : sends
+  COMPLAINT ||--o| FEEDBACK : feedback
+  USER o|--o{ STATUSHISTORY : changes
+  USER o|--o{ NOTIFICATION : receives
+  COMPLAINT o|--o{ NOTIFICATION : references
+  USER ||--o{ PASSWORDRESETTOKEN : owns
+  USER ||--o{ GOOGLELOGINTICKET : owns

@@ -1,0 +1,197 @@
+// Initial migration schema reconstructed from 20261102184527_init.
+Enum Role {
+  CITIZEN
+  OFFICER
+  ADMIN
+}
+Enum ComplaintStatus {
+  SUBMITTED
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CONFIRMED
+  REOPENED
+  NEEDS_REVIEW
+}
+Enum IssueStatus {
+  OPEN
+  RESOLVED
+  CONFIRMED
+}
+Enum SenderRole {
+  CITIZEN
+  OFFICER
+  ADMIN
+  BOT
+}
+Enum Channel {
+  IN_APP
+  EMAIL
+  SMS
+}
+Table User {
+  id text [pk]
+  name text
+  email text [unique, null]
+  phone text [unique, null]
+  passwordHash text
+  role Role
+  createdAt timestamp(3)
+  departmentId text [null]
+  wardId text [null]
+}
+
+Table Department {
+  id text [pk]
+  name text [unique]
+  code text [unique]
+  slaHours integer
+  createdAt timestamp(3)
+  headUserId text [unique, null]
+}
+
+Table Category {
+  id text [pk]
+  name text [unique]
+  subType text [null]
+  defaultSeverity integer
+  keywords text[]
+  dupRadiusMetres integer
+  departmentId text
+}
+
+Table Ward {
+  id text [pk]
+  name text [unique]
+  lat double precision
+  lng double precision
+  boundary jsonb [null]
+}
+
+Table Issue {
+  id text [pk]
+  code text [unique]
+  lat double precision
+  lng double precision
+  reportCount integer
+  priority integer
+  status IssueStatus
+  createdAt timestamp(3)
+  updatedAt timestamp(3)
+  categoryId text
+  wardId text [null]
+}
+
+Table Complaint {
+  id text [pk]
+  code text [unique]
+  originalText text
+  englishText text [null]
+  summary text [null]
+  language text
+  severity integer
+  safetyRisk boolean
+  aiConfidence double precision
+  needsReview boolean
+  routingSource text
+  priority integer
+  priorityReason text
+  lat double precision
+  lng double precision
+  photoUrl text [null]
+  afterPhotoUrl text [null]
+  status ComplaintStatus
+  escalationLevel integer
+  reopened boolean
+  slaHours integer
+  dueAt timestamp(3)
+  resolvedAt timestamp(3) [null]
+  confirmsAt timestamp(3) [null]
+  createdAt timestamp(3)
+  updatedAt timestamp(3)
+  citizenId text [null]
+  officerId text [null]
+  categoryId text [null]
+  departmentId text [null]
+  wardId text [null]
+  issueId text [null]
+}
+
+Table StatusHistory {
+  id text [pk]
+  complaintId text
+  fromStatus text [null]
+  toStatus text
+  note text [null]
+  photoUrl text [null]
+  changedById text [null]
+  createdAt timestamp(3)
+}
+
+Table Transfer {
+  id text [pk]
+  complaintId text
+  fromDeptId text [null]
+  toDeptId text [null]
+  reason text
+  officerId text [null]
+  createdAt timestamp(3)
+}
+
+Table Message {
+  id text [pk]
+  complaintId text
+  senderRole SenderRole
+  senderId text [null]
+  senderName text [null]
+  body text
+  createdAt timestamp(3)
+}
+
+Table Feedback {
+  id text [pk]
+  complaintId text [unique]
+  confirmed boolean
+  rating integer [null]
+  comment text [null]
+  createdAt timestamp(3)
+}
+
+Table Notification {
+  id text [pk]
+  userId text [null]
+  complaintId text [null]
+  channel Channel
+  message text
+  read boolean
+  sentAt timestamp(3)
+}
+
+Table Setting {
+  key text [pk]
+  value text
+  updatedAt timestamp(3)
+}
+Ref: User.departmentId > Department.id
+Ref: User.wardId > Ward.id
+Ref: Department.headUserId - User.id
+Ref: Category.departmentId > Department.id
+Ref: Issue.categoryId > Category.id
+Ref: Issue.wardId > Ward.id
+Ref: Complaint.citizenId > User.id
+Ref: Complaint.officerId > User.id
+Ref: Complaint.categoryId > Category.id
+Ref: Complaint.departmentId > Department.id
+Ref: Complaint.wardId > Ward.id
+Ref: Complaint.issueId > Issue.id
+Ref: StatusHistory.complaintId > Complaint.id
+Ref: StatusHistory.changedById > User.id
+Ref: Transfer.complaintId > Complaint.id
+Ref: Transfer.fromDeptId > Department.id
+Ref: Transfer.toDeptId > Department.id
+Ref: Transfer.officerId > User.id
+Ref: Message.complaintId > Complaint.id
+Ref: Message.senderId > User.id
+Ref: Feedback.complaintId - Complaint.id
+Ref: Notification.userId > User.id
+Ref: Notification.complaintId > Complaint.id

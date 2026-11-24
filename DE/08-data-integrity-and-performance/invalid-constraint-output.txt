@@ -1,0 +1,11 @@
+-- Expected to fail at INSERT with a Category.departmentId foreign-key violation.
+-- Run only in a separately verified disposable PostgreSQL database.
+BEGIN;
+BEGIN
+INSERT INTO "Category" ("id", "name", "departmentId")
+VALUES ('invalid_demo_category', 'Invalid FK demonstration', 'missing_demo_department');
+psql:DE/08-data-integrity-and-performance/invalid-constraint-demo.sql:5: ERROR:  insert or update on table "Category" violates foreign key constraint "Category_departmentId_fkey"
+DETAIL:  Key (departmentId)=(missing_demo_department) is not present in table "Department".
+-- After capturing the FK error, issue ROLLBACK (the transaction is aborted).
+ROLLBACK;
+ROLLBACK

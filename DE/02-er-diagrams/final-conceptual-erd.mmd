@@ -1,0 +1,20 @@
+erDiagram
+  USER o|--o{ COMPLAINT : reports
+  USER o|--o{ COMPLAINT : assigned_to
+  DEPARTMENT ||--o{ CATEGORY : owns
+  DEPARTMENT o|--o{ USER : includes
+  USER o|--o| DEPARTMENT : heads
+  DEPARTMENT o|--o{ COMPLAINT : routes
+  CATEGORY o|--o{ COMPLAINT : classifies
+  WARD o|--o{ USER : serves
+  WARD o|--o{ COMPLAINT : locates
+  WARD o|--o{ ISSUE : locates
+  CATEGORY ||--o{ ISSUE : groups
+  ISSUE o|--o{ COMPLAINT : aggregates
+  COMPLAINT ||--o{ STATUS_HISTORY : tracks
+  COMPLAINT ||--o{ TRANSFER : records
+  DEPARTMENT o|--o{ TRANSFER : source_or_target
+  COMPLAINT ||--o{ MESSAGE : contains
+  COMPLAINT ||--o| FEEDBACK : receives
+  USER o|--o{ NOTIFICATION : receives
+  COMPLAINT o|--o{ NOTIFICATION : references
