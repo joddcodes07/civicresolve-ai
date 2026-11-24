@@ -15,6 +15,7 @@ const { registerWindowIpc }      = require('./window.ipc.cjs');
 const { registerPowerIpc }       = require('./power.ipc.cjs');
 const { registerOfflineQueueIpc }  = require('./offline-queue.ipc.cjs');
 const { registerAttachmentIpc }    = require('./attachment.ipc.cjs');
+const { registerAccessibilityIpc } = require('./accessibility.ipc.cjs');
 
 function registerIpcHandlers() {
   registerAppIpc();
@@ -34,6 +35,7 @@ function registerIpcHandlers() {
   registerPowerIpc();
   registerOfflineQueueIpc();
   registerAttachmentIpc();
+  registerAccessibilityIpc();
 }
 
 module.exports = { registerIpcHandlers };

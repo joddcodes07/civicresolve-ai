@@ -5,6 +5,7 @@ import { ConsoleShell } from './components/layout/ConsoleShell.jsx'
 import { useAuth } from './lib/auth.jsx'
 import { PageLoader } from './components/layout/PageLoader.jsx'
 import { OfflineBanner } from './components/layout/OfflineBanner.jsx'
+import { DesktopAccessibilityBar } from './components/desktop/DesktopAccessibilityBar.jsx'
 import { getSocket } from './lib/socket.js'
 
 // Citizen-facing core loads eagerly (it is the first impression).
@@ -83,6 +84,7 @@ export function App() {
   return (
     <>
       <OfflineBanner />
+      <DesktopAccessibilityBar />
       <Suspense fallback={<PageLoader fullScreen />}>
         <Routes>
       <Route element={<CitizenLayout />}>

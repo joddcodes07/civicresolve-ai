@@ -533,5 +533,87 @@ contextBridge.exposeInMainWorld('desktop', {
          */
         constraints: () =>
             ipcRenderer.invoke('desktop:attachment:constraints'),
+    },
+
+    // ── Desktop Accessibility, Zoom & Kiosk Mode (Milestone 30) ──────────────
+
+    accessibility: {
+        /**
+         * Gets current accessibility, zoom, kiosk and high-contrast status.
+         * @returns {Promise<{ zoomFactor: number, minZoom: number, maxZoom: number, isKiosk: boolean, isFullScreen: boolean, highContrast: boolean, invertedColors: boolean, screenReaderEnabled: boolean, platform: string }>}
+         */
+        getInfo: () =>
+            ipcRenderer.invoke('desktop:accessibility:getInfo'),
+
+        /**
+         * Gets current window zoom factor (e.g. 1.0 = 100%).
+         * @returns {Promise<number>}
+         */
+        getZoom: () =>
+            ipcRenderer.invoke('desktop:accessibility:getZoom'),
+
+        /**
+         * Sets window zoom factor (clamped between 0.5 and 3.0).
+         * @param {number} factor
+         * @returns {Promise<number>}
+         */
+        setZoom: (factor) =>
+            ipcRenderer.invoke('desktop:accessibility:setZoom', factor),
+
+        /**
+         * Increments zoom factor by 0.1.
+         * @returns {Promise<number>}
+         */
+        zoomIn: () =>
+            ipcRenderer.invoke('desktop:accessibility:zoomIn'),
+
+        /**
+         * Decrements zoom factor by 0.1.
+         * @returns {Promise<number>}
+         */
+        zoomOut: () =>
+            ipcRenderer.invoke('desktop:accessibility:zoomOut'),
+
+        /**
+         * Resets zoom factor to 1.0 (100%).
+         * @returns {Promise<number>}
+         */
+        resetZoom: () =>
+            ipcRenderer.invoke('desktop:accessibility:resetZoom'),
+
+        /**
+         * Sets or toggles kiosk mode.
+         * @param {boolean} [enabled]
+         * @returns {Promise<boolean>}
+         */
+        setKiosk: (enabled) =>
+            ipcRenderer.invoke('desktop:accessibility:setKiosk', enabled),
+
+        /**
+         * Toggles full-screen mode.
+         * @returns {Promise<boolean>}
+         */
+        toggleFullScreen: () =>
+            ipcRenderer.invoke('desktop:accessibility:toggleFullScreen'),
+
+        /**
+         * Enables or disables accessibility support in Chromium.
+         * @param {boolean} enabled
+         * @returns {Promise<boolean>}
+         */
+        setSupport: (enabled) =>
+            ipcRenderer.invoke('desktop:accessibility:setSupport', enabled),
+
+        /**
+         * Subscribes to accessibility, zoom or kiosk state change events.
+         * @param {(info: object) => void} callback
+         * @returns {() => void} Unsubscribe function
+         */
+        onStateChanged: (callback) => {
+            if (typeof callback !== 'function') return () => { };
+            const handler = (_event, info) => callback(info);
+            ipcRenderer.on('desktop:accessibility:state-changed', handler);
+            return () => ipcRenderer.removeListener('desktop:accessibility:state-changed', handler);
+        }
     }
 });
