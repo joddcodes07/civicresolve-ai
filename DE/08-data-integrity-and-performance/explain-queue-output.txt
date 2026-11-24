@@ -1,0 +1,25 @@
+                                                             QUERY PLAN
+------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=28.88..28.90 rows=5 width=76) (actual time=0.109..0.112 rows=4.00 loops=1)
+   Buffers: shared hit=5
+   ->  Sort  (cost=28.88..28.90 rows=5 width=76) (actual time=0.107..0.109 rows=4.00 loops=1)
+         Sort Key: c."dueAt"
+         Sort Method: quicksort  Memory: 25kB
+         Buffers: shared hit=5
+         ->  Hash Join  (cost=12.18..28.83 rows=5 width=76) (actual time=0.074..0.078 rows=4.00 loops=1)
+               Hash Cond: (d.id = c."departmentId")
+               Buffers: shared hit=2
+               ->  Seq Scan on "Department" d  (cost=0.00..14.80 rows=480 width=64) (actual time=0.016..0.016 rows=2.00 loops=1)
+                     Buffers: shared hit=1
+               ->  Hash  (cost=12.11..12.11 rows=5 width=76) (actual time=0.044..0.044 rows=4.00 loops=1)
+                     Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                     Buffers: shared hit=1
+                     ->  Seq Scan on "Complaint" c  (cost=0.00..12.11 rows=5 width=76) (actual time=0.023..0.027 rows=4.00 loops=1)
+                           Filter: (status = ANY ('{SUBMITTED,ASSIGNED,IN_PROGRESS,REOPENED,NEEDS_REVIEW}'::"ComplaintStatus"[]))
+                           Rows Removed by Filter: 2
+                           Buffers: shared hit=1
+ Planning:
+   Buffers: shared hit=429
+ Planning Time: 3.396 ms
+ Execution Time: 0.229 ms
+(22 rows)

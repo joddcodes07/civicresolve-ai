@@ -27,4 +27,4 @@ Prisma failures flow into Express async error handling in `server/src/middleware
     React + Vite client -> HTTP / Socket.IO -> Express routes and middleware
     -> Prisma Client + PrismaPg -> PostgreSQL
 
-The frontend API base is configured in `client/src/lib/api.js`. Endpoints are defined in `server/src/index.js` and `server/src/routes/*.routes.js`. Screenshots are pending manual demonstration; no running app or test database was available for trustworthy evidence.
+The frontend API base is configured in `client/src/lib/api.js`. Endpoints are defined in `server/src/index.js` and `server/src/routes/*.routes.js`. The user manually verified `civicresolve_de_test` at `127.0.0.1:5432`; existing SQL result captures omit that identity preflight. Application/backend screenshots remain pending manual demonstration; no running app was inspected in this review.

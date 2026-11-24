@@ -19,4 +19,21 @@ Examples: `server/src/routes/auth.routes.js`, `server/src/routes/complaints.rout
 
 ## Validation demonstration
 
-`invalid-constraint-demo.sql` prepares an intentionally invalid Category insert with a nonexistent department FK. It was not executed. Run only on a disposable migrated database, capture the PostgreSQL FK error, and roll back. Do not infer a successful rejection output without running it.
+`invalid-constraint-demo.sql` was executed successfully against the local disposable PostgreSQL database `civicresolve_de_test`.
+
+The script attempted to insert a Category referencing a nonexistent Department ID (`missing_demo_department`). PostgreSQL rejected the insert because it violated the foreign-key constraint `Category_departmentId_fkey`.
+
+**Observed error:**
+```
+ERROR: insert or update on table "Category" violates
+foreign key constraint "Category_departmentId_fkey"
+
+DETAIL: Key (departmentId)=(missing_demo_department)
+is not present in table "Department".
+```
+
+The user manually verified `civicresolve_de_test` at `127.0.0.1:5432`. The captured psql transcript ends with `ROLLBACK`. The invalid insert was therefore reverted; PostgreSQL's foreign key enforcement prevents the nonexistent parent reference. The original transcript records the SQL error and rollback but does not include the database identity preflight.
+
+**Evidence:** `invalid-constraint-output.txt`
+
+**Verification:** The invalid Category record was not persisted after rollback.

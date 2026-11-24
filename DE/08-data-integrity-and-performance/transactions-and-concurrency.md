@@ -16,4 +16,4 @@ No explicit Prisma isolation level is configured in the inspected transaction ca
 
 The transaction boundary improves atomicity for the quota and its writes. The lock prevents two requests for the same account from both passing the quota check concurrently across workers. Other simultaneous status transitions can still race because the code reads state, validates transition, then updates without a conditional version check/row lock. This is an area for future concurrency testing and hardening.
 
-No concurrency experiment or database transaction was run for this submission.
+No concurrency experiment was run during this review. The transactional query examples were executed in the pre-existing Q1–Q14 capture, but their output file does not include a database identity preflight; see `../06-project-specific-queries/execution-outputs/STATUS.md`.

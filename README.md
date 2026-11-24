@@ -151,8 +151,9 @@ those reasons.
 ASDGrpProj/
 ├── scripts/db.sh              # project-local Postgres cluster (port 5433)
 ├── server/
-│   ├── prisma/schema.prisma   # 13 models: users, departments, categories, wards, issues,
-│   │                          # complaints, status history, transfers, messages, feedback…
+│   ├── prisma/schema.prisma   # 15 models: users, departments, categories, wards, issues,
+│   │                          # complaints, history, transfers, messages, feedback, notifications,
+│   │                          # settings, reset tokens, sensitive places, Google login tickets
 │   ├── prisma/seed.js         # 14 depts · 27 categories · 12 wards · 20 users · 67 complaints
 │   └── src/
 │       ├── index.js           # express + socket.io + static uploads + error handling

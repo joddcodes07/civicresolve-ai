@@ -1,5 +1,5 @@
 # Execution status
 
-Pending execution. No database operation was attempted because the configured DATABASE_URL / DIRECT_URL target was not verified as a separate test database. No sample output is fabricated.
+`query-results.txt` already contains a psql capture for Q1–Q14. Q12, Q13, and Q14 each end with ROLLBACK. Results align with the fictional data in `../../05-sample-records/demo-fixtures.sql`.
 
-To capture evidence, provision a disposable PostgreSQL database, independently verify host/database/owner, apply the project's migrations there, then run the read-only queries and rollback-wrapped DML statements from ../queries.sql. Save genuine psql output here without connection strings.
+The user manually verified the target as `civicresolve_de_test` at `127.0.0.1:5432`. The capture itself does not include `current_database()`, `inet_server_addr()`, or `inet_server_port()`, so that identity preflight is not part of the original transcript. No query SQL was rerun in this review. Keep any supplementary preflight record free of connection strings and passwords.

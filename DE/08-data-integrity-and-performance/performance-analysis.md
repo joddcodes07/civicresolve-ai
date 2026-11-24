@@ -29,7 +29,7 @@ Complaint history filters citizen and orders by createdAt; `(citizenId, createdA
 
 Officer free-text search uses case-insensitive substring matching on code/summary/text fields. Ordinary B-tree indexes generally do not accelerate arbitrary leading-wildcard substring searches. If this becomes a measured bottleneck, evaluate PostgreSQL trigram indexes or a dedicated search service and verify operational support.
 
-No additional index is created here. EXPLAIN/EXPLAIN ANALYZE was not run because there is no verified test database and no representative safe dataset. Do not invent performance timings.
+No additional index is created here. A pre-existing `EXPLAIN (ANALYZE, BUFFERS)` capture is in `explain-queue-output.txt`. On the captured six-complaint demo dataset, PostgreSQL used sequential scans of Complaint and Department, a hash join, and a sort on dueAt. The plan returned four unresolved rows; execution time was 0.229 ms and planning time 3.396 ms, with shared buffers reported in the file. These timings describe only this tiny local test dataset and are not a production performance claim. The user manually verified `civicresolve_de_test` at `127.0.0.1:5432`; the original plan transcript omits the identity preflight and query text. This review did not rerun EXPLAIN.
 
 ## Growth considerations
 

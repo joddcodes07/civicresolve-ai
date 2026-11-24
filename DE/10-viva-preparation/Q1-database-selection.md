@@ -11,7 +11,7 @@
 - `DE/01-database-selection-and-justification.md` for the rationale and clearly labelled estimate.
 - `server/prisma/schema.prisma` for the PostgreSQL provider and connected models.
 - `server/src/routes/complaints.routes.js` for complaint creation and retrieval, plus `server/src/routes/auth.routes.js` for authentication queries.
-- If a verified local demo database is available, show fictional rows and run query 2 (counts by status). SQL execution is pending in this package.
+- Query 2 output is present in `DE/06-project-specific-queries/execution-outputs/query-results.txt` (six statuses, one complaint each). The user manually verified the database as `civicresolve_de_test` at `127.0.0.1:5432`; the capture itself lacks the identity preflight.
 
 ## Follow-up questions
 

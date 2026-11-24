@@ -22,7 +22,7 @@ Show `DE/03-normalization/functional-dependencies.md`, `normalization-analysis.m
 
 ## Q4 — Correctness
 
-“PostgreSQL enforces keys, uniqueness, foreign keys, required columns and enum values. Zod and service code add request checks such as required contact fields and location validation. There are no CHECK constraints for ranges such as rating. Complaint submission uses a transaction and a per-citizen transaction advisory lock for the daily quota. Some status and transfer workflows do not wrap all related writes in a transaction, which is a known gap. No invalid-row demo has been executed yet.”
+“PostgreSQL enforces keys, uniqueness, foreign keys, required columns and enum values. Zod and service code add request checks such as required contact fields and location validation. There are no CHECK constraints for ranges such as rating. Complaint submission uses a transaction and a per-citizen transaction advisory lock for the daily quota. Some status and transfer workflows do not wrap all related writes in a transaction, which is a known gap. I manually verified civicresolve_de_test at 127.0.0.1:5432. The captured FK rejection and rollback transcript does not include the identity preflight.”
 
 Show `constraints-and-validation.md`, `server/src/services/submissionService.js`, and the separate status/history writes in `complaintService.js`.
 
@@ -34,4 +34,4 @@ Show `performance-analysis.md`, the index declarations, `server/src/routes/offic
 
 ## Closing
 
-“This submission distinguishes implemented schema and code from recommendations. The diagrams and SQL were prepared from the checked-in Prisma schema and migrations. I did not access or change production data. SQL outputs and local screenshots still require a disposable test database and manual capture.”
+“This submission distinguishes implemented schema and code from recommendations. The diagrams and SQL were prepared from the checked-in Prisma schema and migrations. I did not access or change production data. I manually verified civicresolve_de_test at 127.0.0.1:5432. SQL output captures are present, but the original transcripts do not include the identity preflight. I still need to capture local application screenshots.”
