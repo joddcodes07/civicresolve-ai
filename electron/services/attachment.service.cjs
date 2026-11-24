@@ -19,8 +19,8 @@
 
 const path  = require('path');
 const fs    = require('fs');
+const crypto = require('crypto');
 const { app, shell } = require('electron');
-const { v4: uuidv4 } = require('uuid');
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -121,7 +121,7 @@ function saveAttachment(srcPath, mimeType = '', sessionId = '') {
 
   validateFile(srcPath, mimeType);
 
-  const id      = uuidv4();
+  const id      = crypto.randomUUID();
   const ext     = path.extname(srcPath).toLowerCase();
   const name    = path.basename(srcPath);
   const stored  = path.join(getStoreDir(), `${id}${ext}`);
