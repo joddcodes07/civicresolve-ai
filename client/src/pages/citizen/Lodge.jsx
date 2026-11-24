@@ -46,6 +46,33 @@ export default function Lodge() {
     api.get('/api/meta/categories').then((d) => setCategories(d.categories)).catch(() => {})
   }, [])
 
+  // Hydrate draft from desktop offline queue if available
+  useEffect(() => {
+    if (window.desktop?.offlineQueue?.getDraft) {
+      window.desktop.offlineQueue
+        .getDraft('lodge-grievance')
+        .then((draft) => {
+          if (draft?.text) {
+            setText(draft.text)
+            if (draft.categoryIdOverride) setCategoryIdOverride(draft.categoryIdOverride)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [])
+
+  // Auto-save draft locally on debounced text update
+  useEffect(() => {
+    if (window.desktop?.offlineQueue?.saveDraft && debouncedText.trim().length >= 4) {
+      window.desktop.offlineQueue
+        .saveDraft('lodge-grievance', {
+          text: debouncedText.trim(),
+          categoryIdOverride
+        })
+        .catch(() => {})
+    }
+  }, [debouncedText, categoryIdOverride])
+
   // Live AI preview (debounced 1.2s).
   useEffect(() => {
     const trimmed = debouncedText.trim()
@@ -113,6 +140,7 @@ export default function Lodge() {
     setJoinBusy(true)
     try {
       const data = await api.post('/api/complaints/join', { issueId: duplicate.issueId, note: text })
+      window.desktop?.offlineQueue?.clearDraft('lodge-grievance')
       setResult({ complaint: data.complaint, joined: true })
       toast(t('lodge.dupJoined'), { tone: 'green' })
     } catch (err) {
@@ -132,6 +160,7 @@ export default function Lodge() {
       if (categoryIdOverride) form.append('categoryId', categoryIdOverride)
       if (photos[0]) form.append('photo', photos[0])
       const data = await api.upload('/api/complaints', form)
+      window.desktop?.offlineQueue?.clearDraft('lodge-grievance')
       setResult({ complaint: data.complaint })
     } catch (err) {
       if (err instanceof ApiError) toast(err.message, { tone: 'red' })

@@ -402,5 +402,73 @@ contextBridge.exposeInMainWorld('desktop', {
             ipcRenderer.on('desktop:power-state-changed', handler);
             return () => ipcRenderer.removeListener('desktop:power-state-changed', handler);
         }
+    },
+
+    // ── Offline Queue & Form Drafts (Milestone 28) ───────────────────────────
+
+    offlineQueue: {
+        /**
+         * Adds an item to the persistent outbox queue.
+         * @param {object} payload
+         * @returns {Promise<{ success: boolean, item?: object, error?: string }>}
+         */
+        add: (payload) =>
+            ipcRenderer.invoke('desktop:queue:add', payload),
+
+        /**
+         * Lists all queued items in the outbox.
+         * @returns {Promise<Array<object>>}
+         */
+        list: () =>
+            ipcRenderer.invoke('desktop:queue:list'),
+
+        /**
+         * Removes a successfully synced item from the outbox.
+         * @param {string} id
+         * @returns {Promise<{ success: boolean }>}
+         */
+        remove: (id) =>
+            ipcRenderer.invoke('desktop:queue:remove', id),
+
+        /**
+         * Updates status or metadata of a queued item.
+         * @param {string} id
+         * @param {object} updates
+         * @returns {Promise<{ success: boolean }>}
+         */
+        update: (id, updates) =>
+            ipcRenderer.invoke('desktop:queue:update', id, updates),
+
+        /**
+         * Clears all items in the outbox.
+         * @returns {Promise<{ success: boolean }>}
+         */
+        clear: () =>
+            ipcRenderer.invoke('desktop:queue:clear'),
+
+        /**
+         * Auto-saves a form draft.
+         * @param {string} key
+         * @param {object} data
+         * @returns {Promise<{ success: boolean }>}
+         */
+        saveDraft: (key, data) =>
+            ipcRenderer.invoke('desktop:draft:save', key, data),
+
+        /**
+         * Retrieves a previously saved form draft.
+         * @param {string} key
+         * @returns {Promise<object | null>}
+         */
+        getDraft: (key) =>
+            ipcRenderer.invoke('desktop:draft:get', key),
+
+        /**
+         * Clears a saved form draft.
+         * @param {string} key
+         * @returns {Promise<{ success: boolean }>}
+         */
+        clearDraft: (key) =>
+            ipcRenderer.invoke('desktop:draft:clear', key)
     }
 });
