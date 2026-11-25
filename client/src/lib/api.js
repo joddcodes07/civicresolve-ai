@@ -1,5 +1,10 @@
 // Tiny fetch wrapper with JWT storage + typed errors.
-const BASE = import.meta.env.VITE_API_URL || ''
+const DEFAULT_API_URL = 'https://civicresolve-api-mq39.onrender.com'
+const isDesktop =
+  typeof window !== 'undefined' &&
+  (window.location.protocol === 'file:' || Boolean(window.desktop?.isElectron))
+
+export const BASE = import.meta.env.VITE_API_URL || (isDesktop && !import.meta.env.DEV ? DEFAULT_API_URL : '')
 const TOKEN_KEY = 'civicresolve.token'
 const USER_KEY = 'civicresolve.user'
 
@@ -113,5 +118,6 @@ export const api = {
 export function uploadUrl(relative) {
   if (!relative) return null
   if (/^https?:/.test(relative)) return relative
-  return `${BASE}${relative}`
+  const cleanRelative = relative.startsWith('/') ? relative : `/${relative}`
+  return `${BASE}${cleanRelative}`
 }

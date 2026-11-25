@@ -16,6 +16,8 @@
  */
 
 const { app } = require('electron');
+const fs = require('node:fs');
+const path = require('node:path');
 
 // electron-updater is bundled with electron-builder.  It is a production
 // dependency only when the app is packaged; in raw development the module
@@ -48,6 +50,24 @@ function sendStatus(status, data = {}) {
   _mainWindow.webContents.send('desktop:update-status', { status, ...data });
 }
 
+/**
+ * A packaged directory build may not contain electron-builder's updater
+ * metadata. Only attempt update checks when that metadata names a provider.
+ */
+function hasConfiguredUpdateProvider() {
+  if (!app.isPackaged || !process.resourcesPath) return false;
+
+  try {
+    const config = fs.readFileSync(path.join(process.resourcesPath, 'app-update.yml'), 'utf8');
+    return /^provider:\s*['"]?[a-z0-9_-]+/im.test(config);
+  } catch (err) {
+    if (err?.code !== 'ENOENT') {
+      console.warn('[Updater] Update provider configuration could not be read; checks disabled for this build.');
+    }
+    return false;
+  }
+}
+
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
@@ -61,6 +81,10 @@ function initUpdater(mainWindow) {
   _mainWindow = mainWindow;
 
   if (!autoUpdater) return;
+  if (!hasConfiguredUpdateProvider()) {
+    console.info('[Updater] No packaged update provider configured; automatic checks skipped.');
+    return;
+  }
 
   // ── Configuration ──────────────────────────────────────────────────────────
   autoUpdater.autoDownload = true;        // download silently in background
@@ -144,6 +168,12 @@ function checkForUpdate() {
 
   if (isDev) {
     console.log('[Updater] checkForUpdate called in dev mode – sending not-available status.');
+    sendStatus('not-available', { version: app.getVersion() });
+    return;
+  }
+
+  if (!hasConfiguredUpdateProvider()) {
+    console.info('[Updater] No packaged update provider configured; update check skipped.');
     sendStatus('not-available', { version: app.getVersion() });
     return;
   }

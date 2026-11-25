@@ -154,15 +154,26 @@ function buildIcns() {
     ['icon_512x512@2x.png',1024],
   ];
 
-  for (const [name, size] of mapping) {
-    const src = path.join(ICONS, `${size}x${size}.png`);
-    if (!fs.existsSync(src)) { warn(`Missing ${src} — skipping icns`); return; }
-    fs.copyFileSync(src, path.join(iconsetDir, name));
-  }
+  try {
+    for (const [name, size] of mapping) {
+      const src = path.join(ICONS, `${size}x${size}.png`);
+      if (!fs.existsSync(src)) { warn(`Missing ${src} — skipping icns`); return; }
+      fs.copyFileSync(src, path.join(iconsetDir, name));
+    }
 
-  execSync(`iconutil -c icns "${iconsetDir}" -o "${path.join(BUILD, 'icon.icns')}"`, { stdio: 'inherit' });
-  fs.rmSync(iconsetDir, { recursive: true, force: true });
-  log(`  → ${path.join(BUILD, 'icon.icns')}`);
+    try {
+      execSync(`iconutil -c icns -o "${path.join(BUILD, 'icon.icns')}" "${iconsetDir}"`, { stdio: 'inherit' });
+      log(`  → ${path.join(BUILD, 'icon.icns')}`);
+    } catch (err) {
+      if (fs.existsSync(path.join(BUILD, 'icon.icns'))) {
+        warn(`iconutil execution failed (e.g. sandboxed environment), using existing ${path.join(BUILD, 'icon.icns')}`);
+      } else {
+        throw err;
+      }
+    }
+  } finally {
+    fs.rmSync(iconsetDir, { recursive: true, force: true });
+  }
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────

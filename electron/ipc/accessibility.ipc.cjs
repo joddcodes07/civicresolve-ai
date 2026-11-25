@@ -29,7 +29,7 @@ const {
   toggleFullScreen,
   setAccessibilitySupport,
 } = require('../services/accessibility.service.cjs');
-const { validateSender } = require('../utils/validators.cjs');
+const { validateSender } = require('../utils/security.cjs');
 
 function registerAccessibilityIpc() {
   ipcMain.handle('desktop:accessibility:getInfo', async (event) => {

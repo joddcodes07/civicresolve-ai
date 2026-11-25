@@ -23,6 +23,9 @@ export function DesktopAccessibilityBar() {
 
     window.desktop.accessibility.getInfo().then((res) => {
       setInfo(res)
+    }).catch(() => {
+      // Accessibility controls are optional; an IPC failure must not become an
+      // unhandled renderer rejection or prevent the rest of the app from loading.
     })
 
     unsubscribe = window.desktop.accessibility.onStateChanged((updated) => {

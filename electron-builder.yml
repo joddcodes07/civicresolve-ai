@@ -35,10 +35,6 @@ files:
 
 # ASAR integrity verification (Electron 30+)
 asar: true
-asarUnpack:
-  # Binaries that cannot live inside an ASAR archive (native addons, CLI tools)
-  - "node_modules/sharp/**"
-  - "node_modules/better-sqlite3/**"
 
 # ── Extra resources copied OUTSIDE the asar (accessible via process.resourcesPath)
 extraResources:

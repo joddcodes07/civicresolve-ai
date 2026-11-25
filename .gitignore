@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-electron/
 build/
 
 # electron-builder build resource folder (Milestone 17)

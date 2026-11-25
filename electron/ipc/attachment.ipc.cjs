@@ -25,7 +25,7 @@ const {
   openAttachment,
   getAttachmentConstraints,
 } = require('../services/attachment.service.cjs');
-const { validateSender }      = require('../utils/validators.cjs');
+const { validateSender }      = require('../utils/security.cjs');
 const { validateSafeString }  = require('../utils/validators.cjs');
 
 // ── Register ─────────────────────────────────────────────────────────────────
