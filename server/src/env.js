@@ -13,10 +13,12 @@ const bool = (v, fallback = false) => {
   return String(v).toLowerCase() === 'true'
 }
 
+const clientOrigin = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').replace(/\/+$/, '')
+
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT || 4000),
-  clientOrigin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  clientOrigin,
   databaseUrl: process.env.DATABASE_URL || '',
 
   jwt: {
