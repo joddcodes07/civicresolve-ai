@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="741" viewBox="0 0 1400 741">
+<rect x="0" y="0" width="1400" height="741" fill="#ffffff"/>
+<style>text{font-family:Arial,sans-serif;fill:#172b4d}.t{font-size:28px;font-weight:bold}.h{font-size:17px;font-weight:bold}.r{font-size:14px}</style>
+<text x="35" y="40" class="t">CivicResolve AI — Final Conceptual ERD</text>
+<rect x="35" y="70" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="47" y="98" class="h">User</text>
+<rect x="485" y="70" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="497" y="98" class="h">Department</text>
+<rect x="935" y="70" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="947" y="98" class="h">Category</text>
+<rect x="35" y="135" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="47" y="163" class="h">Ward</text>
+<rect x="485" y="135" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="497" y="163" class="h">Issue</text>
+<rect x="935" y="135" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="947" y="163" class="h">Complaint</text>
+<rect x="35" y="200" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="47" y="228" class="h">StatusHistory</text>
+<rect x="485" y="200" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="497" y="228" class="h">Transfer</text>
+<rect x="935" y="200" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="947" y="228" class="h">Message</text>
+<rect x="35" y="265" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="47" y="293" class="h">Feedback</text>
+<rect x="485" y="265" width="370" height="44" rx="8" fill="#e8f2ff" stroke="#496581"/>
+<text x="497" y="293" class="h">Notification</text>
+<text x="40" y="330" class="r">USER o|--o{ COMPLAINT · reports</text>
+<text x="40" y="349" class="r">USER o|--o{ COMPLAINT · assigned_to</text>
+<text x="40" y="368" class="r">DEPARTMENT ||--o{ CATEGORY · owns</text>
+<text x="40" y="387" class="r">DEPARTMENT o|--o{ USER · includes</text>
+<text x="40" y="406" class="r">USER o|--o| DEPARTMENT · heads</text>
+<text x="40" y="425" class="r">DEPARTMENT o|--o{ COMPLAINT · routes</text>
+<text x="40" y="444" class="r">CATEGORY o|--o{ COMPLAINT · classifies</text>
+<text x="40" y="463" class="r">WARD o|--o{ USER · serves</text>
+<text x="40" y="482" class="r">WARD o|--o{ COMPLAINT · locates</text>
+<text x="40" y="501" class="r">WARD o|--o{ ISSUE · locates</text>
+<text x="40" y="520" class="r">CATEGORY ||--o{ ISSUE · groups</text>
+<text x="40" y="539" class="r">ISSUE o|--o{ COMPLAINT · aggregates</text>
+<text x="40" y="558" class="r">COMPLAINT ||--o{ STATUS_HISTORY · tracks</text>
+<text x="40" y="577" class="r">COMPLAINT ||--o{ TRANSFER · records</text>
+<text x="40" y="596" class="r">DEPARTMENT o|--o{ TRANSFER · source_or_target</text>
+<text x="40" y="615" class="r">COMPLAINT ||--o{ MESSAGE · contains</text>
+<text x="40" y="634" class="r">COMPLAINT ||--o| FEEDBACK · receives</text>
+<text x="40" y="653" class="r">USER o|--o{ NOTIFICATION · receives</text>
+<text x="40" y="672" class="r">COMPLAINT o|--o{ NOTIFICATION · references</text>
+</svg>

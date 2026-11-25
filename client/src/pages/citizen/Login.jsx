@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useI18n } from '../../lib/i18n.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { api } from '../../lib/api.js'
+import { checkGoogleSignIn } from '../../lib/googleSignIn.js'
 import { Field, Input } from '../../components/ui/Field.jsx'
 import { LogoMark } from '../../components/layout/Logo.jsx'
 import { Spinner } from '../../components/ui/Primitives.jsx'
@@ -27,15 +28,44 @@ export default function Login() {
   const [stats, setStats] = useState(null)
   const [googleEnabled, setGoogleEnabled] = useState(false)
   const [googleError, setGoogleError] = useState('')
+  const [googleStatusError, setGoogleStatusError] = useState('')
+  const [googleConnecting, setGoogleConnecting] = useState(true)
+  const [googleStatusAttempt, setGoogleStatusAttempt] = useState(0)
   const googleHandled = useRef(false)
   const from = location.state?.from || null
   const isLogin = mode === 'login'
 
   useEffect(() => {
-    api.get('/api/auth/google/status').then(({ enabled }) => setGoogleEnabled(enabled)).catch(() => { })
+    // OAuth cookies, start, callback, and exchange all use this website's
+    // same-origin proxy, even when the other API calls use VITE_API_URL.
+    let active = true
+    const controller = new AbortController()
+    setGoogleConnecting(true)
+    setGoogleStatusError('')
+    setGoogleEnabled(false)
+    checkGoogleSignIn({ signal: controller.signal })
+      .then(status => {
+        if (!active) return
+        if (status.origin && status.origin !== window.location.origin) {
+          setGoogleStatusError('Google sign-in is linked to a different website. Please contact the project administrator.')
+          return
+        }
+        setGoogleEnabled(status.enabled)
+        if (!status.enabled) setGoogleStatusError('Google sign-in is temporarily unavailable.')
+      })
+      .catch(error => {
+        if (active) setGoogleStatusError(error.name === 'TimeoutError'
+          ? 'The sign-in service is taking too long. Please retry.'
+          : 'Google sign-in could not be checked. Please retry.')
+      })
+      .finally(() => { if (active) setGoogleConnecting(false) })
+    return () => { active = false; controller.abort() }
+  }, [googleStatusAttempt])
+
+  useEffect(() => {
     api.get('/api/meta/stats').then(d => setStats(d.stats)).catch(() => { })
     api.get('/api/auth/demo-accounts').then((d) => setDemo(d.accounts || [])).catch(() => { })
-  }, [])
+  }, [googleEnabled])
 
   useEffect(() => {
     if (user) navigate(from || (user.role === 'ADMIN' ? '/admin' : user.role === 'OFFICER' ? '/officer' : '/'), { replace: true })
@@ -177,8 +207,7 @@ export default function Login() {
               </button>
             </form>
 
-            {googleEnabled && (
-              <>
+            <>
                 <div className="my-4 flex items-center gap-3 text-xs text-ink-soft">
                   <span className="h-px flex-1 bg-line" />
                   <span>{t('login.or')}</span>
@@ -188,14 +217,18 @@ export default function Login() {
                   type="button"
                   aria-label={t('login.google')}
                   title={t('login.google')}
-                  disabled={busy}
-                  onClick={() => window.location.assign('/api/auth/google/start')}
+                  disabled={busy || !googleEnabled}
+                  onClick={() => window.location.assign('/api/auth/google/start?origin=' + encodeURIComponent(window.location.origin))}
                   className="mx-auto grid size-12 place-items-center rounded-full border border-line-strong bg-white transition-colors hover:border-ink hover:bg-paper disabled:opacity-50"
                 >
                   <img src="/google-g.png" alt="" width="20" height="20" />
                 </button>
-              </>
-            )}
+            </>
+            {googleConnecting && <p role="status" className="mt-3 text-center text-sm text-ink-soft">Connecting to the sign-in service… This may take a minute.</p>}
+            {googleStatusError && <div role="status" className="mt-3 text-sm text-ink-soft">
+              <p>{googleStatusError}</p>
+              <button type="button" className="mt-1 underline" onClick={() => setGoogleStatusAttempt(attempt => attempt + 1)}>Retry Google sign-in</button>
+            </div>}
             {googleError && <p role="alert" className="mt-3 text-sm text-red">{googleError}</p>}
           </section>
 

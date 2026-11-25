@@ -1,0 +1,3 @@
+# Integration evidence status
+
+Manual application demonstration required. No screenshot is attached because no running app session was inspected. The user manually verified `civicresolve_de_test` at `127.0.0.1:5432`; query and plan output files exist, but their original transcripts do not include that identity preflight. For screenshots, use a local frontend/backend connected to the verified disposable database with fictional rows; capture the complaint view, matching PostgreSQL rows, a backend route operation, and the JOIN from query 3 in `DE/06-project-specific-queries/queries.sql`. Exclude secrets and personal data.

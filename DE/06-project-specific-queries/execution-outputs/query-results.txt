@@ -1,0 +1,228 @@
+/******** QUERY *********/
+SELECT "code", "status", "createdAt" FROM "Complaint"
+WHERE "status" = 'SUBMITTED' ORDER BY "createdAt" DESC LIMIT 20;
+/************************/
+
+    code    |  status   |        createdAt
+------------+-----------+-------------------------
+ DEMO-C-001 | SUBMITTED | 2026-11-22 20:44:50.017
+(1 row)
+
+/******** QUERY *********/
+SELECT "status", COUNT(*) AS complaint_count FROM "Complaint"
+GROUP BY "status" ORDER BY complaint_count DESC;
+/************************/
+
+    status    | complaint_count
+--------------+-----------------
+ NEEDS_REVIEW |               1
+ CONFIRMED    |               1
+ RESOLVED     |               1
+ SUBMITTED    |               1
+ ASSIGNED     |               1
+ IN_PROGRESS  |               1
+(6 rows)
+
+/******** QUERY *********/
+SELECT ca."name", COUNT(c.id) AS complaint_count
+FROM "Category" ca LEFT JOIN "Complaint" c ON c."categoryId" = ca.id
+GROUP BY ca.id, ca."name" ORDER BY complaint_count DESC, ca."name";
+/************************/
+
+         name          | complaint_count
+-----------------------+-----------------
+ Demo Road Repair      |               5
+ Demo Waste Management |               1
+(2 rows)
+
+/******** QUERY *********/
+SELECT d."name", COUNT(c.id) AS complaint_count
+FROM "Department" d LEFT JOIN "Complaint" c ON c."departmentId" = d.id
+GROUP BY d.id, d."name" HAVING COUNT(c.id) >= 5 ORDER BY complaint_count DESC;
+/************************/
+
+       name        | complaint_count
+-------------------+-----------------
+ Demo Public Works |               5
+(1 row)
+
+/******** QUERY *********/
+SELECT AVG(EXTRACT(EPOCH FROM ("resolvedAt" - "createdAt")) / 3600) AS avg_hours,
+       MIN("resolvedAt" - "createdAt") AS fastest,
+       MAX("resolvedAt" - "createdAt") AS slowest
+FROM "Complaint" WHERE "resolvedAt" IS NOT NULL;
+/************************/
+
+      avg_hours       | fastest | slowest
+----------------------+---------+---------
+ 120.0000000000000000 | 4 days  | 6 days
+(1 row)
+
+/******** QUERY *********/
+SELECT d."name", c."code", c."status", c."dueAt"
+FROM "Complaint" c JOIN "Department" d ON d.id = c."departmentId"
+WHERE c."status" IN ('SUBMITTED','ASSIGNED','IN_PROGRESS','REOPENED','NEEDS_REVIEW')
+ORDER BY c."dueAt" ASC LIMIT 50;
+/************************/
+
+       name        |    code    |    status    |          dueAt
+-------------------+------------+--------------+-------------------------
+ Demo Sanitation   | DEMO-C-005 | NEEDS_REVIEW | 2026-11-24 08:44:50.017
+ Demo Public Works | DEMO-C-003 | IN_PROGRESS  | 2026-11-24 20:44:50.017
+ Demo Public Works | DEMO-C-002 | ASSIGNED     | 2026-11-25 20:44:50.017
+ Demo Public Works | DEMO-C-001 | SUBMITTED    | 2026-11-26 20:44:50.017
+(4 rows)
+
+/******** QUERY *********/
+SELECT u."id", u."name", COUNT(*) AS reports
+FROM "User" u JOIN "Complaint" c ON c."citizenId" = u.id
+GROUP BY u.id, u.name HAVING COUNT(*) > 1 ORDER BY reports DESC;
+/************************/
+
+      id       |     name      | reports
+---------------+---------------+---------
+ us_demo_asha  | Asha Example  |       4
+ us_demo_rahul | Rahul Example |       2
+(2 rows)
+
+/******** QUERY *********/
+SELECT c."code", c."status" FROM "Complaint" c
+LEFT JOIN "Transfer" t ON t."complaintId" = c.id WHERE t.id IS NULL
+ORDER BY c."createdAt" DESC LIMIT 50;
+/************************/
+
+    code    |    status
+------------+--------------
+ DEMO-C-001 | SUBMITTED
+ DEMO-C-002 | ASSIGNED
+ DEMO-C-005 | NEEDS_REVIEW
+ DEMO-C-004 | RESOLVED
+ DEMO-C-006 | CONFIRMED
+(5 rows)
+
+/******** QUERY *********/
+SELECT c."code", h."fromStatus", h."toStatus", h."createdAt"
+FROM "StatusHistory" h JOIN "Complaint" c ON c.id = h."complaintId"
+ORDER BY h."createdAt" DESC LIMIT 50;
+/************************/
+
+    code    | fromStatus  |  toStatus   |        createdAt
+------------+-------------+-------------+-------------------------
+ DEMO-C-001 |             | SUBMITTED   | 2026-11-23 20:44:50.017
+ DEMO-C-002 | SUBMITTED   | ASSIGNED    | 2026-11-23 20:44:50.017
+ DEMO-C-003 | ASSIGNED    | IN_PROGRESS | 2026-11-23 20:44:50.017
+ DEMO-C-004 | IN_PROGRESS | RESOLVED    | 2026-11-23 20:44:50.017
+ DEMO-C-006 | RESOLVED    | CONFIRMED   | 2026-11-23 20:44:50.017
+(5 rows)
+
+/******** QUERY *********/
+SELECT w."name", COUNT(c.id) AS reports
+FROM "Ward" w LEFT JOIN "Complaint" c ON c."wardId" = w.id
+GROUP BY w.id, w."name" HAVING COUNT(c.id) > 0 ORDER BY reports DESC;
+/************************/
+
+       name        | reports
+-------------------+---------
+ Demo North Ward   |       3
+ Demo Central Ward |       3
+(2 rows)
+
+/******** QUERY *********/
+SELECT i."code", i."status" FROM "Issue" i WHERE NOT EXISTS (
+  SELECT 1 FROM "Complaint" c WHERE c."issueId" = i.id
+    AND c."status" IN ('SUBMITTED','ASSIGNED','IN_PROGRESS','REOPENED','NEEDS_REVIEW')
+) ORDER BY i."createdAt" DESC;
+/************************/
+
+    code    | status
+------------+--------
+ DEMO-I-002 | OPEN
+(1 row)
+
+/******** QUERY *********/
+BEGIN;
+/************************/
+
+BEGIN
+/******** QUERY *********/
+INSERT INTO "Department" ("id", "name", "code") VALUES ('de_sql_update', 'SQL Update Demo', 'SQL-UPD');
+/************************/
+
+INSERT 0 1
+/******** QUERY *********/
+UPDATE "Department" SET "slaHours" = 48 WHERE "id" = 'de_sql_update' AND "code" = 'SQL-UPD';
+/************************/
+
+UPDATE 1
+/******** QUERY *********/
+SELECT "id", "slaHours" FROM "Department" WHERE "id" = 'de_sql_update';
+/************************/
+
+      id       | slaHours
+---------------+----------
+ de_sql_update |       48
+(1 row)
+
+/******** QUERY *********/
+ROLLBACK;
+/************************/
+
+ROLLBACK
+/******** QUERY *********/
+BEGIN;
+/************************/
+
+BEGIN
+/******** QUERY *********/
+INSERT INTO "Department" ("id", "name", "code") VALUES ('de_sql_demo', 'SQL Demo Department', 'SQL-DEMO');
+/************************/
+
+INSERT 0 1
+/******** QUERY *********/
+SELECT "id", "name", "code" FROM "Department" WHERE "id" = 'de_sql_demo';
+/************************/
+
+     id      |        name         |   code
+-------------+---------------------+----------
+ de_sql_demo | SQL Demo Department | SQL-DEMO
+(1 row)
+
+/******** QUERY *********/
+ROLLBACK;
+/************************/
+
+ROLLBACK
+/******** QUERY *********/
+BEGIN;
+/************************/
+
+BEGIN
+/******** QUERY *********/
+INSERT INTO "Complaint" ("id", "code", "originalText", "lat", "lng", "slaHours", "dueAt", "updatedAt") VALUES ('co_sql_delete', 'SQL-DEL-C', 'Fictional delete demonstration', 18.52, 73.85, 72, now() + interval '72 hours', now());
+/************************/
+
+INSERT 0 1
+/******** QUERY *********/
+INSERT INTO "Message" ("id", "complaintId", "senderRole", "body") VALUES ('me_sql_delete', 'co_sql_delete', 'BOT', 'Fictional delete demonstration');
+/************************/
+
+INSERT 0 1
+/******** QUERY *********/
+DELETE FROM "Message" WHERE "id" = 'me_sql_delete' AND "complaintId" = 'co_sql_delete';
+/************************/
+
+DELETE 1
+/******** QUERY *********/
+SELECT COUNT(*) AS remaining_demo_messages FROM "Message" WHERE "id" = 'me_sql_delete';
+/************************/
+
+ remaining_demo_messages
+-------------------------
+                       0
+(1 row)
+
+/******** QUERY *********/
+ROLLBACK;
+/************************/
+
+ROLLBACK
