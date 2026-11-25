@@ -1,0 +1,186 @@
+name: Desktop Release
+
+# Triggered manually or when a version tag is pushed.
+# Builds macOS (dmg), Windows (nsis), and Linux (AppImage + deb) installers
+# and publishes them as a GitHub Release draft.
+#
+# Prerequisites:
+#   • GitHub Actions secret GH_TOKEN with `repo` scope (auto-updated by GitHub Actions)
+#   • (optional) APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID for notarisation
+#   • (optional) WINDOWS_CERT_BASE64 + WINDOWS_CERT_PASSWORD for code signing
+#
+# Usage:
+#   git tag v1.0.1 && git push origin v1.0.1
+#   OR: Actions → Desktop Release → Run workflow
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version tag to build (e.g. v1.2.3)"
+        required: false
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  # ── Build React frontend (shared across all platform jobs) ──────────────────
+  build-web:
+    name: Build React frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Vite frontend
+        run: npm run build
+
+      - name: Upload client/dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+          retention-days: 1
+
+  # ── macOS Installer ────────────────────────────────────────────────────────
+  build-macos:
+    name: macOS (dmg + zip)
+    needs: build-web
+    runs-on: macos-14          # Apple Silicon runner for universal builds
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download client/dist
+        uses: actions/download-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+
+      - name: Generate app icons (requires sharp)
+        run: |
+          npm install --no-save sharp
+          node build/generate-icons.cjs
+
+      - name: Package app (macOS)
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_LINK: ${{ secrets.MAC_CERT_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: npx electron-builder --mac --publish always
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dist
+          path: dist-electron/*.{dmg,zip}
+          retention-days: 7
+
+  # ── Windows Installer ──────────────────────────────────────────────────────
+  build-windows:
+    name: Windows (nsis)
+    needs: build-web
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download client/dist
+        uses: actions/download-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+
+      - name: Generate app icons
+        run: |
+          npm install --no-save sharp
+          node build/generate-icons.cjs
+
+      - name: Package app (Windows)
+        env:
+          WIN_CSC_LINK: ${{ secrets.WINDOWS_CERT_BASE64 }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: npx electron-builder --win --publish always
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-dist
+          path: dist-electron/*.exe
+          retention-days: 7
+
+  # ── Linux Installers ───────────────────────────────────────────────────────
+  build-linux:
+    name: Linux (AppImage + deb)
+    needs: build-web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install system dependencies for electron-builder
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends \
+            rpm fakeroot dpkg
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Download client/dist
+        uses: actions/download-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+
+      - name: Generate app icons
+        run: |
+          npm install --no-save sharp
+          node build/generate-icons.cjs
+
+      - name: Package app (Linux)
+        run: npx electron-builder --linux --publish always
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-dist
+          path: |
+            dist-electron/*.AppImage
+            dist-electron/*.deb
+          retention-days: 7

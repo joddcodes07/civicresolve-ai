@@ -1,8 +1,13 @@
 // Single shared Socket.IO client for live complaint updates.
-import { getToken } from './api'
+import { getToken, BASE } from './api'
 import { io } from 'socket.io-client'
 
-const URL = import.meta.env.VITE_SOCKET_URL || undefined
+const DEFAULT_SOCKET_URL = 'https://civicresolve-api-mq39.onrender.com'
+const isDesktop =
+  typeof window !== 'undefined' &&
+  (window.location.protocol === 'file:' || Boolean(window.desktop?.isElectron))
+
+const URL = import.meta.env.VITE_SOCKET_URL || (isDesktop && !import.meta.env.DEV ? DEFAULT_SOCKET_URL : (BASE || undefined))
 
 let socket = null
 

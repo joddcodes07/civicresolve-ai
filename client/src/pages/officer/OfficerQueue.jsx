@@ -43,11 +43,27 @@ export default function OfficerQueue() {
   const tabs = useMemo(() => FILTERS.map((f) => ({ value: f.value, label: t(f.key) })), [t])
 
   function exportCsv() {
-    const blob = new Blob([toCsv(complaints)], { type: 'text/csv' })
+    const csvContent = toCsv(complaints)
+    const fileName = `civicresolve-queue-${filter}.csv`
+
+    if (window.desktop?.isElectron && window.desktop?.saveFile) {
+      window.desktop
+        .saveFile({
+          defaultName: fileName,
+          content: csvContent,
+          filters: [{ name: 'CSV Files', extensions: ['csv'] }]
+        })
+        .catch((error) => {
+          console.error('Desktop CSV save failed:', error)
+        })
+      return
+    }
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `civicresolve-queue-${filter}.csv`
+    a.download = fileName
     a.click()
     URL.revokeObjectURL(url)
   }

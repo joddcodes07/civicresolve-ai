@@ -1,5 +1,6 @@
 import { StatusPill } from '../ui/Pills.jsx'
 import { formatDateTime } from '../../lib/format.js'
+import { uploadUrl } from '../../lib/api.js'
 
 const DOT_TONE = {
   SUBMITTED: 'bg-blue',
@@ -30,7 +31,7 @@ export function Timeline({ history = [] }) {
             {entry.note && <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">{entry.note}</p>}
             {entry.changedBy && <p className="label mt-1">by {entry.changedBy}</p>}
             {entry.photoUrl && (
-              <img src={entry.photoUrl} alt="Proof" className="mt-2 h-24 w-32 rounded-lg border border-line object-cover" />
+              <img src={uploadUrl(entry.photoUrl)} alt="Proof" className="mt-2 h-24 w-32 rounded-lg border border-line object-cover" />
             )}
           </div>
         </li>

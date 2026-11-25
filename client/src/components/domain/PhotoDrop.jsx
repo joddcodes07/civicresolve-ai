@@ -3,21 +3,81 @@ import { compressImage } from '../../lib/image.js'
 import { IconCamera, IconClose } from '../ui/Icons.jsx'
 import { Spinner } from '../ui/Primitives.jsx'
 
-/** Photo picker that compresses images in the browser before upload. */
-export function PhotoDrop({ files = [], onChange, max = 3, label = 'Add photo' }) {
+/** Photo picker that compresses images before upload. */
+export function PhotoDrop({
+  files = [],
+  onChange,
+  max = 3,
+  label = 'Add photo'
+}) {
   const inputRef = useRef(null)
   const [busy, setBusy] = useState(false)
 
   async function handleFiles(fileList) {
-    const incoming = Array.from(fileList || []).slice(0, max - files.length)
+    const incoming = Array.from(fileList || []).slice(
+      0,
+      Math.max(0, max - files.length)
+    )
+
     if (!incoming.length) return
+
     setBusy(true)
-    const compressed = []
-    for (const file of incoming) {
-      compressed.push(await compressImage(file))
+
+    try {
+      const compressed = []
+      let processed = 0
+
+      for (const file of incoming) {
+        compressed.push(await compressImage(file))
+        processed += 1
+        window.desktop?.setProgressBar?.(processed / incoming.length)
+      }
+
+      onChange([...files, ...compressed].slice(0, max))
+    } catch (error) {
+      console.error('Unable to process selected images:', error)
+    } finally {
+      window.desktop?.setProgressBar?.(-1)
+      setBusy(false)
     }
-    setBusy(false)
-    onChange([...files, ...compressed].slice(0, max))
+  }
+
+  async function openPicker() {
+    // Use Electron's native picker when running as a desktop app
+    if (window.desktop?.isElectron && window.desktop?.selectImages) {
+      setBusy(true)
+
+      try {
+        const selectedImages = await window.desktop.selectImages(
+          max - files.length
+        )
+
+        const selectedFiles = await Promise.all(
+          selectedImages.map(async (image) => {
+            const response = await fetch(
+              `data:${image.mimeType};base64,${image.base64}`
+            )
+
+            const blob = await response.blob()
+
+            return new File([blob], image.name, {
+              type: image.mimeType
+            })
+          })
+        )
+
+        await handleFiles(selectedFiles)
+      } catch (error) {
+        console.error('Native image picker failed:', error)
+      } finally {
+        setBusy(false)
+      }
+
+      return
+    }
+
+    // Normal browser file picker
+    inputRef.current?.click()
   }
 
   return (
@@ -31,11 +91,21 @@ export function PhotoDrop({ files = [], onChange, max = 3, label = 'Add photo' }
         className="flex flex-wrap gap-3"
       >
         {files.map((file, i) => (
-          <div key={i} className="group relative h-24 w-24 overflow-hidden rounded-xl border border-line">
-            <img src={URL.createObjectURL(file)} alt="" className="h-full w-full object-cover" />
+          <div
+            key={i}
+            className="group relative h-24 w-24 overflow-hidden rounded-xl border border-line"
+          >
+            <img
+              src={URL.createObjectURL(file)}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+
             <button
               type="button"
-              onClick={() => onChange(files.filter((_, idx) => idx !== i))}
+              onClick={() =>
+                onChange(files.filter((_, idx) => idx !== i))
+              }
               className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-ink/80 text-paper opacity-0 transition-opacity group-hover:opacity-100"
               aria-label="Remove photo"
             >
@@ -47,14 +117,16 @@ export function PhotoDrop({ files = [], onChange, max = 3, label = 'Add photo' }
         {files.length < max && (
           <button
             type="button"
-            onClick={() => inputRef.current?.click()}
-            className="grid h-24 w-24 place-items-center gap-1 rounded-xl border border-dashed border-line-strong text-ink-faint transition-colors hover:border-blue hover:text-blue"
+            onClick={openPicker}
+            disabled={busy}
+            className="grid h-24 w-24 place-items-center gap-1 rounded-xl border border-dashed border-line-strong text-ink-faint transition-colors hover:border-blue hover:text-blue disabled:opacity-50"
           >
             {busy ? <Spinner /> : <IconCamera size={20} />}
             <span className="label text-[9px]">{label}</span>
           </button>
         )}
       </div>
+
       <input
         ref={inputRef}
         type="file"

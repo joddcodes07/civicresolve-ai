@@ -1,0 +1,178 @@
+# electron-builder.yml  —  Milestone 17
+# Complete packaging & distribution configuration for CivicResolve AI.
+#
+# How to build:
+#   1. npm run build                    (compile React frontend to client/dist)
+#   2. node build/generate-icons.cjs   (generate build/icon.icns, icon.ico, icons/)
+#   3. npm run desktop:pack            (local test — no publish)
+#      OR
+#      npm run desktop:build           (build + sign + publish as GitHub draft)
+#
+# The `publish` block is consumed by electron-updater (M16) to locate GitHub Releases.
+
+# ── Application identity ──────────────────────────────────────────────────────
+appId: com.civicresolve.ai
+productName: CivicResolve AI
+copyright: "Copyright © 2024 CivicResolve AI"
+buildVersion: "1"      # incremented separately from semver for store submissions
+
+# ── Files to include in the asar bundle ──────────────────────────────────────
+# electron-builder bundles everything into an ASAR archive by default.
+# We explicitly whitelist to avoid shipping test files, source maps, etc.
+files:
+  - "electron/**/*"
+  - "client/dist/**/*"
+  - "package.json"
+  # Exclude development-only and large generated artefacts
+  - "!**/__tests__/**"
+  - "!**/*.test.*"
+  - "!**/*.spec.*"
+  - "!**/node_modules/.cache/**"
+  - "!dist-electron/**"
+  - "!.github/**"
+  - "!build/generate-icons.cjs"
+  - "!build/icon.iconset/**"
+
+# ASAR integrity verification (Electron 30+)
+asar: true
+
+# ── Extra resources copied OUTSIDE the asar (accessible via process.resourcesPath)
+extraResources:
+  - from: "build/icons/512x512.png"
+    to:   "icons/512x512.png"
+
+# ── Output & build resource directories ──────────────────────────────────────
+directories:
+  output: dist-electron
+  buildResources: build   # electron-builder looks here for icon.icns / icon.ico / icons/
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+mac:
+  category: public.app-category.productivity
+  icon: build/icon.icns
+  darkModeSupport: true
+
+  # Hardened Runtime is mandatory for Gatekeeper notarisation
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+  # Register civicresolve:// deep-link protocol on macOS
+  protocols:
+    - name: CivicResolve AI
+      schemes:
+        - civicresolve
+      role: Editor
+
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip          # required by Squirrel / electron-updater on macOS
+      arch: [x64, arm64]
+
+dmg:
+  title: "CivicResolve AI ${version}"
+  icon: build/icon.icns
+  iconSize: 100
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+  # Disable signing of the DMG wrapper itself until a certificate is configured
+  sign: false
+  writeUpdateInfo: true
+
+# ── Windows ───────────────────────────────────────────────────────────────────
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64, ia32]
+    - target: nsis-web    # web installer — downloads per-arch payload at install time
+      arch: [x64]
+
+  # Register civicresolve:// deep-link protocol on Windows
+  protocols:
+    - name: CivicResolve AI
+      schemes:
+        - civicresolve
+
+  # Uncomment and set secrets in CI when a certificate is available:
+  # certificateFile: ${env.WIN_CSC_LINK}
+  # certificatePassword: ${env.WIN_CSC_KEY_PASSWORD}
+
+nsis:
+  oneClick: false
+  perMachine: false                 # users can install per-user without admin rights
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: "CivicResolve AI"
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  deleteAppDataOnUninstall: false   # preserve user data on uninstall
+  runAfterFinish: true
+  menuCategory: "CivicResolve AI"
+  language: "1033"                  # English (US)
+
+# ── Linux ─────────────────────────────────────────────────────────────────────
+linux:
+  icon: build/icons              # electron-builder picks the best size automatically
+  category: Office
+  synopsis: "AI-powered citizen grievance management desktop application"
+  description: >
+    CivicResolve AI — An AI-based single window to lodge and track citizen
+    grievances across multiple departments. Route it right, track it live,
+    prove it's fixed.
+
+  # Register civicresolve:// deep-link protocol on Linux (via .desktop file)
+  protocols:
+    - name: CivicResolve AI
+      schemes:
+        - civicresolve
+
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+    - target: rpm
+      arch: [x64]
+
+deb:
+  priority: optional
+  depends:
+    - gconf2
+    - gconf-service
+    - libnotify4
+    - libappindicator1
+    - libxtst6
+    - libnss3
+
+# ── Auto-updater publisher ────────────────────────────────────────────────────
+# electron-updater (M16) reads this section to know where to fetch update feeds.
+# Releases are created as drafts; a maintainer must publish them on GitHub.
+#
+# To publish:    npx electron-builder --publish always
+# To skip pub:   npx electron-builder --publish never
+publish:
+  - provider: github
+    owner: joddcodes07
+    repo: civicresolve-ai
+    releaseType: draft     # prevents accidental live releases
+    private: false
+
+# ── Compression ───────────────────────────────────────────────────────────────
+compression: maximum    # slower build, smaller installer (use 'store' in dev)
+
+# ── Code-signing helpers ──────────────────────────────────────────────────────
+# forceCodeSigning: false   # set true in CI when certs are available

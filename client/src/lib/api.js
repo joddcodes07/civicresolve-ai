@@ -1,5 +1,10 @@
 // Tiny fetch wrapper with JWT storage + typed errors.
-const BASE = import.meta.env.VITE_API_URL || ''
+const DEFAULT_API_URL = 'https://civicresolve-api-mq39.onrender.com'
+const isDesktop =
+  typeof window !== 'undefined' &&
+  (window.location.protocol === 'file:' || Boolean(window.desktop?.isElectron))
+
+export const BASE = import.meta.env.VITE_API_URL || (isDesktop && !import.meta.env.DEV ? DEFAULT_API_URL : '')
 const TOKEN_KEY = 'civicresolve.token'
 const USER_KEY = 'civicresolve.user'
 
@@ -8,6 +13,18 @@ try {
   token = localStorage.getItem(TOKEN_KEY)
 } catch {
   token = null
+}
+
+// Asynchronously hydrate from desktop safeStorage keychain if available
+if (typeof window !== 'undefined' && window.desktop?.safeStorage?.getSecret) {
+  window.desktop.safeStorage
+    .getSecret(TOKEN_KEY)
+    .then((secureToken) => {
+      if (secureToken) {
+        token = secureToken
+      }
+    })
+    .catch(() => {})
 }
 
 export function getToken() {
@@ -21,6 +38,15 @@ export function setToken(next) {
     else localStorage.removeItem(TOKEN_KEY)
   } catch {
     /* ignore */
+  }
+
+  // Sync to OS-level secure vault in Electron desktop
+  if (typeof window !== 'undefined' && window.desktop?.safeStorage) {
+    if (next) {
+      window.desktop.safeStorage.setSecret(TOKEN_KEY, next).catch(() => {})
+    } else {
+      window.desktop.safeStorage.removeSecret(TOKEN_KEY).catch(() => {})
+    }
   }
 }
 
@@ -92,5 +118,6 @@ export const api = {
 export function uploadUrl(relative) {
   if (!relative) return null
   if (/^https?:/.test(relative)) return relative
-  return `${BASE}${relative}`
+  const cleanRelative = relative.startsWith('/') ? relative : `/${relative}`
+  return `${BASE}${cleanRelative}`
 }

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  macOS Hardened Runtime entitlements for CivicResolve AI.
+  Required for Gatekeeper notarisation and auto-updates on macOS 10.14+.
+  electron-builder references this file via the `entitlements` and
+  `entitlementsInherit` keys in electron-builder.yml.
+-->
+<plist version="1.0">
+  <dict>
+    <!-- Allow JIT compilation (required by the V8 JavaScript engine) -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+
+    <!-- Allow execution of unsigned executable memory (required by Electron/Node) -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <!-- Allow loading of dylibs signed by Apple and by the app's certificate -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+
+    <!-- Network access (required for the embedded web server and API calls) -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+
+    <!-- Outbound network server (required for socket.io listener in dev) -->
+    <key>com.apple.security.network.server</key>
+    <true/>
+
+    <!-- User-selected file access (required for native open/save dialogs) -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+
+    <!-- Microphone access (for future voice complaint input) -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+
+    <!-- Camera access (for future photo capture of evidence) -->
+    <key>com.apple.security.device.camera</key>
+    <true/>
+
+    <!-- Location access (for complaint geo-tagging) -->
+    <key>com.apple.security.personal-information.location</key>
+    <true/>
+  </dict>
+</plist>

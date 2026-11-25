@@ -1,9 +1,12 @@
-import { lazy, Suspense } from 'react'
-import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { CitizenLayout } from './components/layout/CitizenLayout.jsx'
 import { ConsoleShell } from './components/layout/ConsoleShell.jsx'
 import { useAuth } from './lib/auth.jsx'
 import { PageLoader } from './components/layout/PageLoader.jsx'
+import { OfflineBanner } from './components/layout/OfflineBanner.jsx'
+import { DesktopAccessibilityBar } from './components/desktop/DesktopAccessibilityBar.jsx'
+import { getSocket } from './lib/socket.js'
 
 // Citizen-facing core loads eagerly (it is the first impression).
 import Home from './pages/citizen/Home.jsx'
@@ -52,9 +55,38 @@ function RequireAuth() {
 }
 
 export function App() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!window.desktop?.onNavigate) return
+    const unsubscribe = window.desktop.onNavigate((targetPath) => {
+      if (typeof targetPath === 'string' && targetPath.startsWith('/')) {
+        navigate(targetPath)
+      }
+    })
+    return unsubscribe
+  }, [navigate])
+
+  useEffect(() => {
+    if (!window.desktop?.power?.onPowerStateChanged) return
+    const unsubscribe = window.desktop.power.onPowerStateChanged(({ event }) => {
+      if (event === 'resume' || event === 'unlock-screen') {
+        try {
+          getSocket().connect()
+        } catch {
+          /* ignore */
+        }
+      }
+    })
+    return unsubscribe
+  }, [])
+
   return (
-    <Suspense fallback={<PageLoader fullScreen />}>
-      <Routes>
+    <>
+      <OfflineBanner />
+      <DesktopAccessibilityBar />
+      <Suspense fallback={<PageLoader fullScreen />}>
+        <Routes>
       <Route element={<CitizenLayout />}>
         <Route index element={<Home />} />
         <Route path="lodge" element={<Lodge />} />
@@ -97,6 +129,7 @@ export function App() {
       <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
+    </>
   )
 }
 

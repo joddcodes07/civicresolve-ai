@@ -43,6 +43,24 @@ export default function PublicMap() {
           >
             Heatmap
           </button>
+          {window.desktop?.windows?.open && (
+            <button
+              type="button"
+              onClick={() => {
+                window.desktop.windows.open({
+                  id: 'detached-public-map',
+                  route: '/map',
+                  title: 'CivicResolve AI — Detached Live Map',
+                  width: 1100,
+                  height: 750
+                })
+              }}
+              className="pill border border-line text-ink-soft hover:border-ink hover:text-ink transition-colors"
+              title="Open map in separate window"
+            >
+              Detach ↗
+            </button>
+          )}
         </div>
       </div>
 
